@@ -174,14 +174,19 @@ export async function POST(req: Request) {
         if (team && user) {
           const teamRole = mapClerkRole(role);
 
-          await prisma.teamMember.update({
+          await prisma.teamMember.upsert({
             where: {
               teamId_userId: {
                 teamId: team.id,
                 userId: user.id,
               },
             },
-            data: {
+            create: {
+              teamId: team.id,
+              userId: user.id,
+              role: teamRole,
+            },
+            update: {
               role: teamRole,
             },
           });

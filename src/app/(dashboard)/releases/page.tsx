@@ -98,6 +98,7 @@ const statusColors: Record<ReleaseStatus, string> = {
   READY_PRODUCTION: "bg-emerald-100 text-emerald-700",
   DEPLOYED: "bg-green-100 text-green-700",
   CANCELLED: "bg-red-100 text-red-700",
+  ROLLED_BACK: "bg-rose-100 text-rose-700",
 };
 
 const statusLabels: Record<ReleaseStatus, string> = {
@@ -110,6 +111,7 @@ const statusLabels: Record<ReleaseStatus, string> = {
   READY_PRODUCTION: "Ready for Production",
   DEPLOYED: "Deployed",
   CANCELLED: "Cancelled",
+  ROLLED_BACK: "Rolled Back",
 };
 
 export default function ReleasesPage() {
@@ -139,7 +141,7 @@ export default function ReleasesPage() {
       title: release.title,
       description: release.description || "",
       serviceId: release.serviceId,
-      sprintId: release.sprintId || "",
+      sprintId: release.sprintId || "none",
       version: release.version || "",
       targetDate: release.targetDate ? new Date(release.targetDate) : undefined,
     });
@@ -159,7 +161,7 @@ export default function ReleasesPage() {
         title: formData.title,
         description: formData.description || undefined,
         serviceId: formData.serviceId,
-        sprintId: formData.sprintId || undefined,
+        sprintId: formData.sprintId && formData.sprintId !== "none" ? formData.sprintId : undefined,
         version: formData.version || undefined,
         targetDate: formData.targetDate?.toISOString(),
       };
@@ -210,7 +212,11 @@ export default function ReleasesPage() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleOpenCreate}>
+            <Button
+              onClick={handleOpenCreate}
+              disabled={servicesLoading || !services || services.length === 0}
+              title={!services || services.length === 0 ? "Create a service first" : undefined}
+            >
               <Plus className="mr-2 h-4 w-4" />
               New Release
             </Button>
@@ -279,7 +285,7 @@ export default function ReleasesPage() {
                         <SelectValue placeholder="Select sprint (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No sprint</SelectItem>
+                        <SelectItem value="none">No sprint</SelectItem>
                         {sprints
                           ?.filter((s) => s.status !== "COMPLETED" && s.status !== "CANCELLED")
                           .map((sprint) => (
@@ -549,7 +555,9 @@ export default function ReleasesPage() {
       ) : (
         <div className="rounded-lg border bg-card p-8 text-center">
           <p className="text-muted-foreground">
-            No releases yet. Create your first release to start tracking deployments.
+            {!services || services.length === 0
+              ? "No services yet. Create a service first before adding releases."
+              : "No releases yet. Create your first release to start tracking deployments."}
           </p>
         </div>
       )}

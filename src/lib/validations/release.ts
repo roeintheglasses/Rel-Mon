@@ -10,6 +10,7 @@ export const releaseStatusEnum = z.enum([
   "READY_PRODUCTION",
   "DEPLOYED",
   "CANCELLED",
+  "ROLLED_BACK",
 ]);
 
 export const createReleaseSchema = z.object({
