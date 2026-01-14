@@ -1,5 +1,3 @@
-// Release Coordinator Database Schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,73 +7,277 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================
-// MULTI-TENANCY & AUTHENTICATION
-// ============================================
-
 model Team {
-  id         String   @id @default(cuid())
-  clerkOrgId String   @unique
-  name       String
-  slug       String   @unique
-
-  // Slack Integration
-  slackWebhookUrl        String?
-  slackChannel           String?
-  notifyOnStatusChange   Boolean @default(true)
-  notifyOnBlocked        Boolean @default(true)
-  notifyOnReadyToDeploy  Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  members          TeamMember[]
-  invitations      TeamInvitation[]
-  services         Service[]
-  sprints          Sprint[]
-  releases         Release[]
-  deploymentGroups DeploymentGroup[]
+  id                    String            @id @default(cuid())
+  clerkOrgId            String            @unique
+  name                  String
+  slug                  String            @unique
+  slackWebhookUrl       String?
+  slackChannel          String?
+  notifyOnStatusChange  Boolean           @default(true)
+  notifyOnBlocked       Boolean           @default(true)
+  notifyOnReadyToDeploy Boolean           @default(true)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  deploymentGroups      DeploymentGroup[]
+  releases              Release[]
+  services              Service[]
+  sprints               Sprint[]
+  invitations           TeamInvitation[]
+  members               TeamMember[]
 
   @@index([clerkOrgId])
 }
 
 model User {
-  id          String  @id @default(cuid())
-  clerkUserId String  @unique
-  email       String  @unique
-  firstName   String?
-  lastName    String?
-  avatarUrl   String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  memberships      TeamMember[]
-  oauthConnections OAuthConnection[]
-  ownedReleases    Release[]         @relation("ReleaseOwner")
-  ownedGroups      DeploymentGroup[] @relation("GroupOwner")
+  id               String            @id @default(cuid())
+  clerkUserId      String            @unique
+  email            String            @unique
+  firstName        String?
+  lastName         String?
+  avatarUrl        String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   activities       Activity[]
   comments         Comment[]
+  ownedGroups      DeploymentGroup[] @relation("GroupOwner")
+  oauthConnections OAuthConnection[]
+  ownedReleases    Release[]         @relation("ReleaseOwner")
+  memberships      TeamMember[]
 
   @@index([clerkUserId])
 }
 
 model TeamMember {
-  id     String   @id @default(cuid())
-  teamId String
-  userId String
-  role   TeamRole @default(MEMBER)
-
+  id       String   @id @default(cuid())
+  teamId   String
+  userId   String
+  role     TeamRole @default(MEMBER)
   joinedAt DateTime @default(now())
-
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId])
   @@index([teamId])
   @@index([userId])
+}
+
+model TeamInvitation {
+  id         String    @id @default(cuid())
+  teamId     String
+  email      String
+  role       TeamRole  @default(MEMBER)
+  token      String    @unique @default(cuid())
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+  team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([token])
+  @@index([email])
+}
+
+model OAuthConnection {
+  id             String        @id @default(cuid())
+  userId         String
+  provider       OAuthProvider
+  accessToken    String
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  providerUserId String?
+  providerEmail  String?
+  cloudId        String?
+  resourceUrl    String?
+  scopes         String[]
+  isValid        Boolean       @default(true)
+  lastUsedAt     DateTime?
+  lastErrorAt    DateTime?
+  lastError      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([provider])
+}
+
+model Service {
+  id             String    @id @default(cuid())
+  teamId         String
+  name           String
+  slug           String
+  description    String?
+  repoOwner      String?
+  repoName       String?
+  repoUrl        String?
+  jiraProjectKey String?
+  color          String    @default("#6366f1")
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  releases       Release[]
+  team           Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, slug])
+  @@index([teamId])
+}
+
+model Sprint {
+  id               String            @id @default(cuid())
+  teamId           String
+  name             String
+  startDate        DateTime
+  endDate          DateTime
+  status           SprintStatus      @default(PLANNING)
+  goal             String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deploymentGroups DeploymentGroup[]
+  releases         Release[]
+  team             Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([teamId, status])
+  @@index([startDate, endDate])
+}
+
+model DeploymentGroup {
+  id            String                @id @default(cuid())
+  teamId        String
+  sprintId      String?
+  ownerId       String?
+  name          String
+  description   String?
+  deployOrder   DeployOrder           @default(SEQUENTIAL)
+  orderSequence String[]
+  targetDate    DateTime?
+  deployedAt    DateTime?
+  status        DeploymentGroupStatus @default(PENDING)
+  notifyOnReady Boolean               @default(true)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  owner         User?                 @relation("GroupOwner", fields: [ownerId], references: [id])
+  sprint        Sprint?               @relation(fields: [sprintId], references: [id])
+  team          Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  releases      Release[]
+
+  @@index([teamId])
+  @@index([sprintId])
+}
+
+model Release {
+  id                String              @id @default(cuid())
+  teamId            String
+  serviceId         String
+  sprintId          String?
+  deploymentGroupId String?
+  ownerId           String?
+  title             String
+  description       String?
+  version           String?
+  status            ReleaseStatus       @default(PLANNING)
+  statusChangedAt   DateTime            @default(now())
+  priority          ReleasePriority     @default(MEDIUM)
+  isHotfix          Boolean             @default(false)
+  isBlocked         Boolean             @default(false)
+  blockedReason     String?
+  targetDate        DateTime?
+  stagingDeployedAt DateTime?
+  prodDeployedAt    DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  activities        Activity[]
+  comments          Comment[]
+  deploymentGroup   DeploymentGroup?    @relation(fields: [deploymentGroupId], references: [id])
+  owner             User?               @relation("ReleaseOwner", fields: [ownerId], references: [id])
+  service           Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  sprint            Sprint?             @relation(fields: [sprintId], references: [id])
+  team              Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  dependents        ReleaseDependency[] @relation("BlockingRelease")
+  dependsOn         ReleaseDependency[] @relation("DependentRelease")
+  items             ReleaseItem[]
+
+  @@index([teamId])
+  @@index([serviceId])
+  @@index([sprintId])
+  @@index([deploymentGroupId])
+  @@index([status])
+  @@index([ownerId])
+}
+
+model ReleaseItem {
+  id           String          @id @default(cuid())
+  releaseId    String
+  type         ReleaseItemType
+  externalId   String
+  externalUrl  String?
+  title        String?
+  status       String?
+  assignee     String?
+  lastSyncedAt DateTime?
+  syncError    String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  release      Release         @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+
+  @@unique([releaseId, type, externalId])
+  @@index([releaseId])
+  @@index([type])
+}
+
+model ReleaseDependency {
+  id                 String         @id @default(cuid())
+  dependentReleaseId String
+  blockingReleaseId  String
+  type               DependencyType @default(BLOCKS)
+  description        String?
+  isResolved         Boolean        @default(false)
+  resolvedAt         DateTime?
+  createdAt          DateTime       @default(now())
+  blockingRelease    Release        @relation("BlockingRelease", fields: [blockingReleaseId], references: [id], onDelete: Cascade)
+  dependentRelease   Release        @relation("DependentRelease", fields: [dependentReleaseId], references: [id], onDelete: Cascade)
+
+  @@unique([dependentReleaseId, blockingReleaseId])
+  @@index([dependentReleaseId])
+  @@index([blockingReleaseId])
+}
+
+model Activity {
+  id          String       @id @default(cuid())
+  teamId      String?
+  releaseId   String?
+  userId      String?
+  type        ActivityType
+  action      String
+  description String
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+  release     Release?     @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id])
+
+  @@index([releaseId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([teamId, createdAt])
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  releaseId String
+  userId    String
+  content   String
+  isEdited  Boolean   @default(false)
+  editedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  release   Release   @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([releaseId])
+  @@index([userId])
+  @@index([releaseId, createdAt])
 }
 
 enum TeamRole {
@@ -85,153 +287,16 @@ enum TeamRole {
   VIEWER
 }
 
-model TeamInvitation {
-  id        String   @id @default(cuid())
-  teamId    String
-  email     String
-  role      TeamRole @default(MEMBER)
-  token     String   @unique @default(cuid())
-  expiresAt DateTime
-
-  acceptedAt DateTime?
-  createdAt  DateTime  @default(now())
-
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-
-  @@index([teamId])
-  @@index([token])
-  @@index([email])
-}
-
-// ============================================
-// USER-LEVEL OAUTH CONNECTIONS
-// ============================================
-
-model OAuthConnection {
-  id       String        @id @default(cuid())
-  userId   String
-  provider OAuthProvider
-
-  // Encrypted tokens
-  accessToken    String
-  refreshToken   String?
-  tokenExpiresAt DateTime?
-
-  // Provider-specific data
-  providerUserId String?
-  providerEmail  String?
-  cloudId        String? // Jira Cloud ID
-  resourceUrl    String? // e.g., https://your-domain.atlassian.net
-  scopes         String[]
-
-  // Connection status
-  isValid     Boolean   @default(true)
-  lastUsedAt  DateTime?
-  lastErrorAt DateTime?
-  lastError   String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, provider])
-  @@index([userId])
-  @@index([provider])
-}
-
 enum OAuthProvider {
   JIRA
   GITHUB
-}
-
-// ============================================
-// CORE ENTITIES
-// ============================================
-
-model Service {
-  id          String  @id @default(cuid())
-  teamId      String
-  name        String
-  slug        String
-  description String?
-
-  // Repository info
-  repoOwner String?
-  repoName  String?
-  repoUrl   String?
-
-  // Jira project mapping
-  jiraProjectKey String?
-
-  // Display
-  color    String  @default("#6366f1")
-  isActive Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  team     Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  releases Release[]
-
-  @@unique([teamId, slug])
-  @@index([teamId])
-}
-
-model Sprint {
-  id        String       @id @default(cuid())
-  teamId    String
-  name      String
-  startDate DateTime
-  endDate   DateTime
-  status    SprintStatus @default(PLANNING)
-  goal      String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  team             Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  releases         Release[]
-  deploymentGroups DeploymentGroup[]
-
-  @@index([teamId])
-  @@index([teamId, status])
-  @@index([startDate, endDate])
 }
 
 enum SprintStatus {
   PLANNING
   ACTIVE
   COMPLETED
-}
-
-model DeploymentGroup {
-  id          String  @id @default(cuid())
-  teamId      String
-  sprintId    String?
-  ownerId     String?
-  name        String
-  description String?
-
-  // Deployment coordination
-  deployOrder   DeployOrder @default(SEQUENTIAL)
-  orderSequence String[]    // Array of release IDs in order
-  targetDate    DateTime?
-  deployedAt    DateTime?
-  status        DeploymentGroupStatus @default(PENDING)
-
-  notifyOnReady Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  team     Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  sprint   Sprint?   @relation(fields: [sprintId], references: [id], onDelete: SetNull)
-  owner    User?     @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  releases Release[]
-
-  @@index([teamId])
-  @@index([sprintId])
+  CANCELLED
 }
 
 enum DeployOrder {
@@ -245,64 +310,6 @@ enum DeploymentGroupStatus {
   DEPLOYING
   DEPLOYED
   CANCELLED
-}
-
-// ============================================
-// RELEASE TRACKING
-// ============================================
-
-model Release {
-  id                String  @id @default(cuid())
-  teamId            String
-  serviceId         String
-  sprintId          String?
-  deploymentGroupId String?
-  ownerId           String?
-
-  // Release info
-  title       String
-  description String?
-  version     String?
-
-  // Status tracking
-  status          ReleaseStatus @default(PLANNING)
-  statusChangedAt DateTime      @default(now())
-
-  // Priority and flags
-  priority      ReleasePriority @default(MEDIUM)
-  isHotfix      Boolean         @default(false)
-  isBlocked     Boolean         @default(false)
-  blockedReason String?
-
-  // Target date
-  targetDate DateTime?
-
-  // Deployment tracking
-  stagingDeployedAt DateTime?
-  prodDeployedAt    DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  team            Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  service         Service          @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  sprint          Sprint?          @relation(fields: [sprintId], references: [id], onDelete: SetNull)
-  deploymentGroup DeploymentGroup? @relation(fields: [deploymentGroupId], references: [id], onDelete: SetNull)
-  owner           User?            @relation("ReleaseOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-
-  items      ReleaseItem[]
-  dependsOn  ReleaseDependency[] @relation("DependentRelease")
-  dependents ReleaseDependency[] @relation("BlockingRelease")
-  activities Activity[]
-  comments   Comment[]
-
-  @@index([teamId])
-  @@index([serviceId])
-  @@index([sprintId])
-  @@index([deploymentGroupId])
-  @@index([status])
-  @@index([ownerId])
 }
 
 enum ReleaseStatus {
@@ -325,88 +332,15 @@ enum ReleasePriority {
   CRITICAL
 }
 
-model ReleaseItem {
-  id        String          @id @default(cuid())
-  releaseId String
-  type      ReleaseItemType
-
-  // External reference
-  externalId  String
-  externalUrl String?
-
-  // Cached metadata
-  title    String?
-  status   String?
-  assignee String?
-
-  // Sync tracking
-  lastSyncedAt DateTime?
-  syncError    String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
-
-  @@unique([releaseId, type, externalId])
-  @@index([releaseId])
-  @@index([type])
-}
-
 enum ReleaseItemType {
   JIRA_TICKET
   GITHUB_PR
-}
-
-model ReleaseDependency {
-  id                 String         @id @default(cuid())
-  dependentReleaseId String
-  blockingReleaseId  String
-  type               DependencyType @default(BLOCKS)
-  description        String?
-
-  isResolved Boolean   @default(false)
-  resolvedAt DateTime?
-
-  createdAt DateTime @default(now())
-
-  dependentRelease Release @relation("DependentRelease", fields: [dependentReleaseId], references: [id], onDelete: Cascade)
-  blockingRelease  Release @relation("BlockingRelease", fields: [blockingReleaseId], references: [id], onDelete: Cascade)
-
-  @@unique([dependentReleaseId, blockingReleaseId])
-  @@index([dependentReleaseId])
-  @@index([blockingReleaseId])
 }
 
 enum DependencyType {
   BLOCKS
   SOFT_DEPENDENCY
   REQUIRES_SYNC
-}
-
-// ============================================
-// ACTIVITY & COMMENTS
-// ============================================
-
-model Activity {
-  id        String       @id @default(cuid())
-  teamId    String?
-  releaseId String?
-  userId    String?
-  type      ActivityType
-  action    String
-  description String
-  metadata  Json?
-
-  createdAt DateTime @default(now())
-
-  release Release? @relation(fields: [releaseId], references: [id], onDelete: Cascade)
-  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([releaseId])
-  @@index([userId])
-  @@index([createdAt])
-  @@index([teamId, createdAt])
 }
 
 enum ActivityType {
@@ -420,24 +354,4 @@ enum ActivityType {
   COMMENT_ADDED
   DEPLOYMENT_GROUP_ASSIGNED
   USER_ASSIGNED
-}
-
-model Comment {
-  id        String @id @default(cuid())
-  releaseId String
-  userId    String
-  content   String @db.Text
-
-  isEdited Boolean   @default(false)
-  editedAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  release Release @relation(fields: [releaseId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([releaseId])
-  @@index([userId])
-  @@index([releaseId, createdAt])
 }
