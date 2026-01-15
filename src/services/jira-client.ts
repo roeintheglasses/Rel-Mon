@@ -242,16 +242,25 @@ export async function getJiraIssue(
   return response.json();
 }
 
+/**
+ * Escapes special JQL characters to prevent injection attacks
+ */
+function escapeJql(value: string): string {
+  // Escape backslashes first, then quotes
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 export async function searchJiraByText(
   userId: string,
   searchText: string,
   projectKey?: string,
   maxResults: number = 20
 ): Promise<JiraSearchResult> {
-  let jql = `text ~ "${searchText}"`;
+  // Sanitize user input to prevent JQL injection
+  let jql = `text ~ "${escapeJql(searchText)}"`;
 
   if (projectKey) {
-    jql = `project = "${projectKey}" AND ${jql}`;
+    jql = `project = "${escapeJql(projectKey)}" AND ${jql}`;
   }
 
   jql += " ORDER BY updated DESC";
@@ -259,10 +268,11 @@ export async function searchJiraByText(
   return searchJiraIssues(userId, jql, maxResults);
 }
 
-export async function getJiraIssueUrl(cloudId: string, issueKey: string): Promise<string> {
-  // Get the resource URL from the connection
+export async function getJiraIssueUrl(userId: string, cloudId: string, issueKey: string): Promise<string> {
+  // Get the resource URL from the connection, scoped to the user
   const connection = await prisma.oAuthConnection.findFirst({
     where: {
+      userId,
       cloudId,
       provider: "JIRA",
     },

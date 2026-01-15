@@ -24,8 +24,20 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get("q");
     const owner = searchParams.get("owner");
     const repo = searchParams.get("repo");
-    const state = (searchParams.get("state") || "all") as "open" | "closed" | "all";
-    const limit = parseInt(searchParams.get("limit") || "20", 10);
+
+    // Validate state parameter
+    const stateParam = searchParams.get("state") || "all";
+    if (!["open", "closed", "all"].includes(stateParam)) {
+      return NextResponse.json(
+        { error: "Invalid state parameter. Must be 'open', 'closed', or 'all'" },
+        { status: 400 }
+      );
+    }
+    const state = stateParam as "open" | "closed" | "all";
+
+    // Validate and sanitize limit parameter
+    const limitParam = parseInt(searchParams.get("limit") || "20", 10);
+    const limit = Number.isNaN(limitParam) || limitParam < 1 ? 20 : Math.min(limitParam, 100);
 
     if (!query && (!owner || !repo)) {
       return NextResponse.json(

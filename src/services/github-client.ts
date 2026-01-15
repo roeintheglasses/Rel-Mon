@@ -120,8 +120,10 @@ export async function searchGitHubPRs(
   query: string,
   perPage: number = 20
 ): Promise<GitHubSearchResult> {
+  // Note: Callers are responsible for including 'type:pr' if needed
+  // to avoid duplicate qualifiers in the query
   const params = new URLSearchParams({
-    q: `${query} type:pr`,
+    q: query,
     per_page: perPage.toString(),
     sort: "updated",
     order: "desc",

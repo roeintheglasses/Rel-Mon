@@ -15,14 +15,16 @@ export async function GET() {
     }
 
     const clientId = process.env.GITHUB_CLIENT_ID;
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/github/callback`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
-    if (!clientId) {
+    if (!clientId || !appUrl) {
       return NextResponse.json(
         { error: "GitHub OAuth not configured" },
         { status: 500 }
       );
     }
+
+    const redirectUri = `${appUrl}/api/oauth/github/callback`;
 
     // Generate state for CSRF protection
     const state = randomBytes(32).toString("hex");

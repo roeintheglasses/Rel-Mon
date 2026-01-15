@@ -20,14 +20,16 @@ export async function GET() {
     }
 
     const clientId = process.env.JIRA_CLIENT_ID;
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/oauth/jira/callback`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
-    if (!clientId) {
+    if (!clientId || !appUrl) {
       return NextResponse.json(
         { error: "Jira OAuth not configured" },
         { status: 500 }
       );
     }
+
+    const redirectUri = `${appUrl}/api/oauth/jira/callback`;
 
     // Generate state for CSRF protection
     const state = randomBytes(32).toString("hex");

@@ -116,10 +116,18 @@ export async function POST(request: Request) {
     });
 
     if (!dbUser) {
+      const primaryEmail = user.emailAddresses[0]?.emailAddress;
+      if (!primaryEmail) {
+        return NextResponse.json(
+          { error: "User email not available" },
+          { status: 400 }
+        );
+      }
+
       dbUser = await prisma.user.create({
         data: {
           clerkUserId: user.id,
-          email: user.emailAddresses[0]?.emailAddress || "",
+          email: primaryEmail,
           firstName: user.firstName || null,
           lastName: user.lastName || null,
           avatarUrl: user.imageUrl || null,
