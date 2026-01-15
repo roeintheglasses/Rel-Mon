@@ -1,7 +1,115 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { updateReleaseSchema } from "@/lib/validations/release";
+import { updateReleaseSchema, ReleaseStatus } from "@/lib/validations/release";
+
+// Helper to recalculate blocked status for releases that depend on a given release
+async function recalculateDependentBlockedStatus(
+  blockingReleaseId: string
+): Promise<void> {
+  // Find all releases that depend on this release
+  const dependentReleases = await prisma.releaseDependency.findMany({
+    where: { blockingReleaseId },
+    select: { dependentReleaseId: true },
+  });
+
+  for (const dep of dependentReleases) {
+    await recalculateBlockedStatus(dep.dependentReleaseId);
+  }
+}
+
+// Helper to recalculate blocked status for a specific release
+async function recalculateBlockedStatus(releaseId: string): Promise<void> {
+  const unresolvedBlockers = await prisma.releaseDependency.findFirst({
+    where: {
+      dependentReleaseId: releaseId,
+      type: "BLOCKS",
+      isResolved: false,
+      blockingRelease: {
+        status: {
+          notIn: ["DEPLOYED", "CANCELLED"],
+        },
+      },
+    },
+    include: {
+      blockingRelease: {
+        select: { title: true, status: true },
+      },
+    },
+  });
+
+  const isBlocked = !!unresolvedBlockers;
+  const blockedReason = unresolvedBlockers
+    ? `Blocked by: ${unresolvedBlockers.blockingRelease.title} (${unresolvedBlockers.blockingRelease.status})`
+    : null;
+
+  await prisma.release.update({
+    where: { id: releaseId },
+    data: { isBlocked, blockedReason },
+  });
+}
+
+// Helper to update deployment group status based on child releases
+async function updateDeploymentGroupStatus(
+  deploymentGroupId: string
+): Promise<void> {
+  const group = await prisma.deploymentGroup.findUnique({
+    where: { id: deploymentGroupId },
+    include: {
+      releases: {
+        select: { status: true },
+      },
+    },
+  });
+
+  if (!group || group.releases.length === 0) return;
+
+  const statuses = group.releases.map((r) => r.status);
+
+  let newStatus: "PENDING" | "READY" | "DEPLOYING" | "DEPLOYED" | "CANCELLED" =
+    group.status;
+
+  // All deployed = group deployed
+  if (statuses.every((s) => s === "DEPLOYED")) {
+    newStatus = "DEPLOYED";
+  }
+  // Any in staging or production states = deploying
+  else if (
+    statuses.some((s) =>
+      ["IN_STAGING", "STAGING_VERIFIED", "READY_PRODUCTION"].includes(s)
+    )
+  ) {
+    newStatus = "DEPLOYING";
+  }
+  // All ready for staging or beyond = ready
+  else if (
+    statuses.every((s) =>
+      [
+        "READY_STAGING",
+        "IN_STAGING",
+        "STAGING_VERIFIED",
+        "READY_PRODUCTION",
+        "DEPLOYED",
+      ].includes(s)
+    )
+  ) {
+    newStatus = "READY";
+  }
+  // Otherwise pending
+  else {
+    newStatus = "PENDING";
+  }
+
+  if (newStatus !== group.status) {
+    await prisma.deploymentGroup.update({
+      where: { id: deploymentGroupId },
+      data: {
+        status: newStatus,
+        deployedAt: newStatus === "DEPLOYED" ? new Date() : group.deployedAt,
+      },
+    });
+  }
+}
 
 // GET /api/releases/[id] - Get a single release with full details
 export async function GET(
@@ -187,7 +295,18 @@ export async function PATCH(
     }
     if (validatedData.serviceId) updateData.serviceId = validatedData.serviceId;
     if (validatedData.sprintId !== undefined) updateData.sprintId = validatedData.sprintId || null;
-    if (validatedData.status) updateData.status = validatedData.status;
+    if (validatedData.status) {
+      updateData.status = validatedData.status;
+      updateData.statusChangedAt = new Date();
+
+      // Set deployment timestamps
+      if (validatedData.status === "IN_STAGING" && !existingRelease.stagingDeployedAt) {
+        updateData.stagingDeployedAt = new Date();
+      }
+      if (validatedData.status === "DEPLOYED" && !existingRelease.prodDeployedAt) {
+        updateData.prodDeployedAt = new Date();
+      }
+    }
 
     const release = await prisma.release.update({
       where: { id },
@@ -218,6 +337,20 @@ export async function PATCH(
         },
       },
     });
+
+    // If status changed to DEPLOYED or CANCELLED, recalculate blocked status for dependent releases
+    if (
+      validatedData.status &&
+      validatedData.status !== existingRelease.status &&
+      (validatedData.status === "DEPLOYED" || validatedData.status === "CANCELLED")
+    ) {
+      await recalculateDependentBlockedStatus(id);
+    }
+
+    // If release is in a deployment group, update the group status
+    if (existingRelease.deploymentGroupId && validatedData.status) {
+      await updateDeploymentGroupStatus(existingRelease.deploymentGroupId);
+    }
 
     return NextResponse.json(release);
   } catch (error) {
