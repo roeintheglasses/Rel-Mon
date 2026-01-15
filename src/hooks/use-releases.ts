@@ -57,7 +57,10 @@ interface FetchReleasesOptions {
   sprintId?: string;
   serviceId?: string;
   status?: string;
+  statuses?: string[];
   ownerId?: string;
+  mine?: boolean;
+  isBlocked?: boolean;
 }
 
 async function fetchReleases(options?: FetchReleasesOptions): Promise<Release[]> {
@@ -65,7 +68,10 @@ async function fetchReleases(options?: FetchReleasesOptions): Promise<Release[]>
   if (options?.sprintId) params.set("sprintId", options.sprintId);
   if (options?.serviceId) params.set("serviceId", options.serviceId);
   if (options?.status) params.set("status", options.status);
+  if (options?.statuses) params.set("statuses", options.statuses.join(","));
   if (options?.ownerId) params.set("ownerId", options.ownerId);
+  if (options?.mine) params.set("mine", "true");
+  if (options?.isBlocked !== undefined) params.set("isBlocked", String(options.isBlocked));
 
   const url = `/api/releases${params.toString() ? `?${params.toString()}` : ""}`;
   const response = await fetch(url);

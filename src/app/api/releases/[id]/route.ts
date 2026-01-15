@@ -1,7 +1,67 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { updateReleaseSchema } from "@/lib/validations/release";
+import { updateReleaseSchema, ReleaseStatus } from "@/lib/validations/release";
+import { recalculateDependentBlockedStatus } from "@/services/blocked-status";
+
+// Helper to update deployment group status based on child releases
+async function updateDeploymentGroupStatus(
+  deploymentGroupId: string
+): Promise<void> {
+  const group = await prisma.deploymentGroup.findUnique({
+    where: { id: deploymentGroupId },
+    include: {
+      releases: {
+        select: { status: true },
+      },
+    },
+  });
+
+  if (!group || group.releases.length === 0) return;
+
+  const allStatuses = group.releases.map((r) => r.status);
+
+  // Filter out CANCELLED releases for status calculation
+  const nonCancelledStatuses = allStatuses.filter((s) => s !== "CANCELLED");
+
+  let newStatus: "PENDING" | "READY" | "DEPLOYING" | "DEPLOYED" | "CANCELLED" =
+    group.status;
+
+  // If all releases are cancelled, group is cancelled
+  if (nonCancelledStatuses.length === 0) {
+    newStatus = "CANCELLED";
+  }
+  // All non-cancelled deployed = group deployed
+  else if (nonCancelledStatuses.every((s) => s === "DEPLOYED")) {
+    newStatus = "DEPLOYED";
+  }
+  // All non-cancelled are ready for staging = ready (check this BEFORE deploying)
+  else if (nonCancelledStatuses.every((s) => s === "READY_STAGING")) {
+    newStatus = "READY";
+  }
+  // Any in staging or production states = deploying
+  else if (
+    nonCancelledStatuses.some((s) =>
+      ["IN_STAGING", "STAGING_VERIFIED", "READY_PRODUCTION"].includes(s)
+    )
+  ) {
+    newStatus = "DEPLOYING";
+  }
+  // Otherwise pending
+  else {
+    newStatus = "PENDING";
+  }
+
+  if (newStatus !== group.status) {
+    await prisma.deploymentGroup.update({
+      where: { id: deploymentGroupId },
+      data: {
+        status: newStatus,
+        deployedAt: newStatus === "DEPLOYED" ? new Date() : group.deployedAt,
+      },
+    });
+  }
+}
 
 // GET /api/releases/[id] - Get a single release with full details
 export async function GET(
@@ -187,7 +247,18 @@ export async function PATCH(
     }
     if (validatedData.serviceId) updateData.serviceId = validatedData.serviceId;
     if (validatedData.sprintId !== undefined) updateData.sprintId = validatedData.sprintId || null;
-    if (validatedData.status) updateData.status = validatedData.status;
+    if (validatedData.status) {
+      updateData.status = validatedData.status;
+      updateData.statusChangedAt = new Date();
+
+      // Set deployment timestamps
+      if (validatedData.status === "IN_STAGING" && !existingRelease.stagingDeployedAt) {
+        updateData.stagingDeployedAt = new Date();
+      }
+      if (validatedData.status === "DEPLOYED" && !existingRelease.prodDeployedAt) {
+        updateData.prodDeployedAt = new Date();
+      }
+    }
 
     const release = await prisma.release.update({
       where: { id },
@@ -218,6 +289,30 @@ export async function PATCH(
         },
       },
     });
+
+    // If status changed to DEPLOYED or CANCELLED, recalculate blocked status for dependent releases
+    if (
+      validatedData.status &&
+      validatedData.status !== existingRelease.status &&
+      (validatedData.status === "DEPLOYED" || validatedData.status === "CANCELLED")
+    ) {
+      try {
+        await recalculateDependentBlockedStatus(id);
+      } catch (err) {
+        console.error("Failed to recalculate dependent blocked status:", err);
+        // Continue - main operation succeeded
+      }
+    }
+
+    // If release is in a deployment group, update the group status
+    if (existingRelease.deploymentGroupId && validatedData.status) {
+      try {
+        await updateDeploymentGroupStatus(existingRelease.deploymentGroupId);
+      } catch (err) {
+        console.error("Failed to update deployment group status:", err);
+        // Continue - main operation succeeded
+      }
+    }
 
     return NextResponse.json(release);
   } catch (error) {
