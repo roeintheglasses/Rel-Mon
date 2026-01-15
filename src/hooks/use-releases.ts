@@ -23,6 +23,59 @@ export interface ReleaseSprint {
   status: string;
 }
 
+export interface ReleaseItem {
+  id: string;
+  releaseId: string;
+  type: "JIRA_TICKET" | "GITHUB_PR";
+  externalId: string;
+  externalUrl: string | null;
+  title: string | null;
+  status: string | null;
+  assignee: string | null;
+  lastSyncedAt: string | null;
+  syncError: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReleaseDependency {
+  id: string;
+  dependentReleaseId: string;
+  blockingReleaseId: string;
+  type: "BLOCKS" | "SOFT_DEPENDENCY" | "REQUIRES_SYNC";
+  description: string | null;
+  isResolved: boolean;
+  resolvedAt: string | null;
+  createdAt: string;
+  blockingRelease?: Release;
+  dependentRelease?: Release;
+}
+
+export interface ReleaseActivity {
+  id: string;
+  teamId: string | null;
+  releaseId: string | null;
+  userId: string | null;
+  type: string;
+  action: string;
+  description: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  user: ReleaseOwner | null;
+}
+
+export interface ReleaseComment {
+  id: string;
+  releaseId: string;
+  userId: string;
+  content: string;
+  isEdited: boolean;
+  editedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: ReleaseOwner;
+}
+
 export interface Release {
   id: string;
   teamId: string;
@@ -46,6 +99,11 @@ export interface Release {
   service: ReleaseService;
   sprint: ReleaseSprint | null;
   owner: ReleaseOwner;
+  items?: ReleaseItem[];
+  dependsOn?: { blockingRelease: Release }[];
+  dependents?: { dependentRelease: Release }[];
+  activities?: ReleaseActivity[];
+  comments?: ReleaseComment[];
   _count?: {
     items: number;
     dependsOn: number;
