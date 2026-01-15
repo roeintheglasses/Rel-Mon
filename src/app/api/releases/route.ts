@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { createReleaseSchema } from "@/lib/validations/release";
+import { createReleaseSchema, ReleaseStatus } from "@/lib/validations/release";
 
 // GET /api/releases - List all releases for the current team
 export async function GET(request: Request) {
   try {
-    const { orgId } = await auth();
+    const { userId, orgId } = await auth();
 
-    if (!orgId) {
+    if (!orgId || !userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -24,15 +24,40 @@ export async function GET(request: Request) {
     const sprintId = searchParams.get("sprintId");
     const serviceId = searchParams.get("serviceId");
     const status = searchParams.get("status");
+    const statuses = searchParams.get("statuses"); // comma-separated statuses
     const ownerId = searchParams.get("ownerId");
+    const mine = searchParams.get("mine") === "true";
+    const isBlocked = searchParams.get("isBlocked");
+
+    // If filtering by "mine", get the current user's DB id
+    let currentUserDbId: string | undefined;
+    if (mine) {
+      const dbUser = await prisma.user.findUnique({
+        where: { clerkUserId: userId },
+        select: { id: true },
+      });
+      currentUserDbId = dbUser?.id;
+    }
+
+    // Build status filter
+    let statusFilter = {};
+    if (statuses) {
+      const statusList = statuses.split(",") as ReleaseStatus[];
+      statusFilter = { status: { in: statusList } };
+    } else if (status) {
+      statusFilter = { status: status as ReleaseStatus };
+    }
 
     const releases = await prisma.release.findMany({
       where: {
         teamId: team.id,
         ...(sprintId ? { sprintId } : {}),
         ...(serviceId ? { serviceId } : {}),
-        ...(status ? { status: status as never } : {}),
+        ...statusFilter,
         ...(ownerId ? { ownerId } : {}),
+        ...(mine && currentUserDbId ? { ownerId: currentUserDbId } : {}),
+        ...(isBlocked === "true" ? { isBlocked: true } : {}),
+        ...(isBlocked === "false" ? { isBlocked: false } : {}),
       },
       orderBy: { updatedAt: "desc" },
       include: {
