@@ -138,7 +138,19 @@ async function getValidAccessToken(userId: string): Promise<{ token: string; clo
     connection.tokenExpiresAt &&
     connection.tokenExpiresAt.getTime() < Date.now() + 5 * 60 * 1000;
 
-  if (isExpired && connection.refreshToken) {
+  if (isExpired) {
+    if (!connection.refreshToken) {
+      // Token is expired and no refresh token available - fail fast
+      await prisma.oAuthConnection.update({
+        where: { id: connection.id },
+        data: {
+          isValid: false,
+          lastErrorAt: new Date(),
+          lastError: "Token expired and no refresh token available",
+        },
+      });
+      throw new Error("Jira token expired. Please reconnect your Jira account.");
+    }
     accessToken = await refreshJiraToken(connection);
   } else {
     accessToken = decryptToken(connection.accessToken);
