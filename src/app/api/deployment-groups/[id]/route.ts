@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { updateDeploymentGroupSchema } from "@/lib/validations/deployment-group";
+import { ZodError } from "zod";
 
 // GET /api/deployment-groups/[id] - Get a single deployment group with full details
 export async function GET(
@@ -189,9 +190,9 @@ export async function PATCH(
   } catch (error) {
     console.error("Error updating deployment group:", error);
 
-    if (error instanceof Error && error.name === "ZodError") {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: "Validation failed", details: error },
+        { error: "Validation failed", details: error.issues },
         { status: 400 }
       );
     }

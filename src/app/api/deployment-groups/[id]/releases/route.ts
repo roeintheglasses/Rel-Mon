@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { assignReleasesSchema } from "@/lib/validations/deployment-group";
+import { ZodError } from "zod";
 
 // POST /api/deployment-groups/[id]/releases - Assign releases to a deployment group
 export async function POST(
@@ -101,9 +102,9 @@ export async function POST(
   } catch (error) {
     console.error("Error assigning releases:", error);
 
-    if (error instanceof Error && error.name === "ZodError") {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: "Validation failed", details: error },
+        { error: "Validation failed", details: error.issues },
         { status: 400 }
       );
     }
@@ -199,9 +200,9 @@ export async function DELETE(
   } catch (error) {
     console.error("Error removing releases:", error);
 
-    if (error instanceof Error && error.name === "ZodError") {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: "Validation failed", details: error },
+        { error: "Validation failed", details: error.issues },
         { status: 400 }
       );
     }

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { createDeploymentGroupSchema } from "@/lib/validations/deployment-group";
+import { createDeploymentGroupSchema, deploymentGroupStatusEnum } from "@/lib/validations/deployment-group";
+import { ZodError } from "zod";
 
 // GET /api/deployment-groups - List all deployment groups for the current team
 export async function GET(request: Request) {
@@ -22,13 +23,26 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const sprintId = searchParams.get("sprintId");
-    const status = searchParams.get("status");
+    const statusParam = searchParams.get("status");
+
+    // Validate status parameter if provided
+    let validatedStatus: "PENDING" | "READY" | "DEPLOYING" | "DEPLOYED" | "CANCELLED" | undefined;
+    if (statusParam) {
+      const statusResult = deploymentGroupStatusEnum.safeParse(statusParam);
+      if (!statusResult.success) {
+        return NextResponse.json(
+          { error: "Invalid status parameter", validStatuses: deploymentGroupStatusEnum.options },
+          { status: 400 }
+        );
+      }
+      validatedStatus = statusResult.data;
+    }
 
     const deploymentGroups = await prisma.deploymentGroup.findMany({
       where: {
         teamId: team.id,
         ...(sprintId ? { sprintId } : {}),
-        ...(status ? { status: status as "PENDING" | "READY" | "DEPLOYING" | "DEPLOYED" | "CANCELLED" } : {}),
+        ...(validatedStatus ? { status: validatedStatus } : {}),
       },
       orderBy: { updatedAt: "desc" },
       include: {
@@ -169,9 +183,9 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error creating deployment group:", error);
 
-    if (error instanceof Error && error.name === "ZodError") {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: "Validation failed", details: error },
+        { error: "Validation failed", details: error.issues },
         { status: 400 }
       );
     }

@@ -107,7 +107,8 @@ function IntegrationsContent() {
       } else {
         toast.error("Failed to disconnect");
       }
-    } catch {
+    } catch (error) {
+      console.error("Failed to disconnect:", error);
       toast.error("Failed to disconnect");
     } finally {
       setDisconnecting(null);
