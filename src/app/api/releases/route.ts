@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { createReleaseSchema, ReleaseStatus } from "@/lib/validations/release";
+import { createReleaseSchema, ReleaseStatus, releaseStatusEnum } from "@/lib/validations/release";
 
 // GET /api/releases - List all releases for the current team
 export async function GET(request: Request) {
@@ -37,15 +37,25 @@ export async function GET(request: Request) {
         select: { id: true },
       });
       currentUserDbId = dbUser?.id;
+      if (!currentUserDbId) {
+        // User not found in DB, return empty array
+        return NextResponse.json([]);
+      }
     }
 
-    // Build status filter
+    // Build status filter with validation
     let statusFilter = {};
     if (statuses) {
-      const statusList = statuses.split(",") as ReleaseStatus[];
-      statusFilter = { status: { in: statusList } };
+      const statusList = statuses
+        .split(",")
+        .filter((s) => releaseStatusEnum.safeParse(s).success) as ReleaseStatus[];
+      if (statusList.length > 0) {
+        statusFilter = { status: { in: statusList } };
+      }
     } else if (status) {
-      statusFilter = { status: status as ReleaseStatus };
+      if (releaseStatusEnum.safeParse(status).success) {
+        statusFilter = { status: status as ReleaseStatus };
+      }
     }
 
     const releases = await prisma.release.findMany({

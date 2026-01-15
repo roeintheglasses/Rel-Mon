@@ -33,7 +33,8 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
+    const parsedLimit = parseInt(searchParams.get("limit") || "50", 10);
+    const limit = Math.min(Number.isNaN(parsedLimit) ? 50 : parsedLimit, 100);
 
     const activities = await prisma.activity.findMany({
       where: { releaseId },

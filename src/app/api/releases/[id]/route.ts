@@ -2,52 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { updateReleaseSchema, ReleaseStatus } from "@/lib/validations/release";
-
-// Helper to recalculate blocked status for releases that depend on a given release
-async function recalculateDependentBlockedStatus(
-  blockingReleaseId: string
-): Promise<void> {
-  // Find all releases that depend on this release
-  const dependentReleases = await prisma.releaseDependency.findMany({
-    where: { blockingReleaseId },
-    select: { dependentReleaseId: true },
-  });
-
-  for (const dep of dependentReleases) {
-    await recalculateBlockedStatus(dep.dependentReleaseId);
-  }
-}
-
-// Helper to recalculate blocked status for a specific release
-async function recalculateBlockedStatus(releaseId: string): Promise<void> {
-  const unresolvedBlockers = await prisma.releaseDependency.findFirst({
-    where: {
-      dependentReleaseId: releaseId,
-      type: "BLOCKS",
-      isResolved: false,
-      blockingRelease: {
-        status: {
-          notIn: ["DEPLOYED", "CANCELLED"],
-        },
-      },
-    },
-    include: {
-      blockingRelease: {
-        select: { title: true, status: true },
-      },
-    },
-  });
-
-  const isBlocked = !!unresolvedBlockers;
-  const blockedReason = unresolvedBlockers
-    ? `Blocked by: ${unresolvedBlockers.blockingRelease.title} (${unresolvedBlockers.blockingRelease.status})`
-    : null;
-
-  await prisma.release.update({
-    where: { id: releaseId },
-    data: { isBlocked, blockedReason },
-  });
-}
+import { recalculateDependentBlockedStatus } from "@/services/blocked-status";
 
 // Helper to update deployment group status based on child releases
 async function updateDeploymentGroupStatus(
@@ -64,36 +19,33 @@ async function updateDeploymentGroupStatus(
 
   if (!group || group.releases.length === 0) return;
 
-  const statuses = group.releases.map((r) => r.status);
+  const allStatuses = group.releases.map((r) => r.status);
+
+  // Filter out CANCELLED releases for status calculation
+  const nonCancelledStatuses = allStatuses.filter((s) => s !== "CANCELLED");
 
   let newStatus: "PENDING" | "READY" | "DEPLOYING" | "DEPLOYED" | "CANCELLED" =
     group.status;
 
-  // All deployed = group deployed
-  if (statuses.every((s) => s === "DEPLOYED")) {
+  // If all releases are cancelled, group is cancelled
+  if (nonCancelledStatuses.length === 0) {
+    newStatus = "CANCELLED";
+  }
+  // All non-cancelled deployed = group deployed
+  else if (nonCancelledStatuses.every((s) => s === "DEPLOYED")) {
     newStatus = "DEPLOYED";
+  }
+  // All non-cancelled are ready for staging = ready (check this BEFORE deploying)
+  else if (nonCancelledStatuses.every((s) => s === "READY_STAGING")) {
+    newStatus = "READY";
   }
   // Any in staging or production states = deploying
   else if (
-    statuses.some((s) =>
+    nonCancelledStatuses.some((s) =>
       ["IN_STAGING", "STAGING_VERIFIED", "READY_PRODUCTION"].includes(s)
     )
   ) {
     newStatus = "DEPLOYING";
-  }
-  // All ready for staging or beyond = ready
-  else if (
-    statuses.every((s) =>
-      [
-        "READY_STAGING",
-        "IN_STAGING",
-        "STAGING_VERIFIED",
-        "READY_PRODUCTION",
-        "DEPLOYED",
-      ].includes(s)
-    )
-  ) {
-    newStatus = "READY";
   }
   // Otherwise pending
   else {
@@ -344,12 +296,22 @@ export async function PATCH(
       validatedData.status !== existingRelease.status &&
       (validatedData.status === "DEPLOYED" || validatedData.status === "CANCELLED")
     ) {
-      await recalculateDependentBlockedStatus(id);
+      try {
+        await recalculateDependentBlockedStatus(id);
+      } catch (err) {
+        console.error("Failed to recalculate dependent blocked status:", err);
+        // Continue - main operation succeeded
+      }
     }
 
     // If release is in a deployment group, update the group status
     if (existingRelease.deploymentGroupId && validatedData.status) {
-      await updateDeploymentGroupStatus(existingRelease.deploymentGroupId);
+      try {
+        await updateDeploymentGroupStatus(existingRelease.deploymentGroupId);
+      } catch (err) {
+        console.error("Failed to update deployment group status:", err);
+        // Continue - main operation succeeded
+      }
     }
 
     return NextResponse.json(release);

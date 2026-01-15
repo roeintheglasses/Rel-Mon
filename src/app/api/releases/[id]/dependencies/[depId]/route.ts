@@ -2,41 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { updateDependencySchema } from "@/lib/validations/dependency";
-
-// Helper to recalculate blocked status for a release
-async function recalculateBlockedStatus(releaseId: string): Promise<void> {
-  // Check if there are any unresolved BLOCKS dependencies
-  const unresolvedBlockers = await prisma.releaseDependency.findFirst({
-    where: {
-      dependentReleaseId: releaseId,
-      type: "BLOCKS",
-      isResolved: false,
-      blockingRelease: {
-        status: {
-          notIn: ["DEPLOYED", "CANCELLED"],
-        },
-      },
-    },
-    include: {
-      blockingRelease: {
-        select: { title: true, status: true },
-      },
-    },
-  });
-
-  const isBlocked = !!unresolvedBlockers;
-  const blockedReason = unresolvedBlockers
-    ? `Blocked by: ${unresolvedBlockers.blockingRelease.title} (${unresolvedBlockers.blockingRelease.status})`
-    : null;
-
-  await prisma.release.update({
-    where: { id: releaseId },
-    data: {
-      isBlocked,
-      blockedReason,
-    },
-  });
-}
+import { recalculateBlockedStatus } from "@/services/blocked-status";
 
 // GET - Get a specific dependency
 export async function GET(
@@ -118,7 +84,16 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
+
     const validationResult = updateDependencySchema.safeParse(body);
 
     if (!validationResult.success) {

@@ -8,10 +8,6 @@ const createCommentSchema = z.object({
   content: z.string().min(1, "Comment cannot be empty").max(10000),
 });
 
-const updateCommentSchema = z.object({
-  content: z.string().min(1, "Comment cannot be empty").max(10000),
-});
-
 // GET - List comments for a release
 export async function GET(
   request: NextRequest,
@@ -49,6 +45,7 @@ export async function GET(
         user: {
           select: {
             id: true,
+            clerkUserId: true,
             firstName: true,
             lastName: true,
             email: true,
@@ -139,6 +136,7 @@ export async function POST(
         user: {
           select: {
             id: true,
+            clerkUserId: true,
             firstName: true,
             lastName: true,
             email: true,

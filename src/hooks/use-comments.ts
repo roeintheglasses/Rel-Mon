@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export interface CommentUser {
   id: string;
+  clerkUserId: string;
   firstName: string | null;
   lastName: string | null;
   email: string;

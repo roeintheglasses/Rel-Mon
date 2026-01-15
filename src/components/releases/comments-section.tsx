@@ -317,7 +317,7 @@ export function CommentsSection({ releaseId }: CommentsSectionProps) {
               key={comment.id}
               comment={comment}
               releaseId={releaseId}
-              isOwner={user?.id === comment.user.id}
+              isOwner={user?.id === comment.user.clerkUserId}
             />
           ))}
         </div>

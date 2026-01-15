@@ -85,14 +85,91 @@ function getInitials(owner: Release["owner"]) {
   return owner.email.slice(0, 2).toUpperCase();
 }
 
-function BlockedReleaseCard({ release }: { release: Release }) {
-  const { data: dependencies, isLoading: depsLoading } = useDependencies(release.id);
+// Separate component for lazy-loaded dependency content
+function BlockedReleaseDependencies({ releaseId, blockedReason }: { releaseId: string; blockedReason: string | null }) {
+  const { data: dependencies, isLoading: depsLoading, error: depsError } = useDependencies(releaseId);
 
   // Get unresolved blocking dependencies
   const blockingDeps = dependencies?.dependsOn?.filter(
     (d) => !d.isResolved && d.type === "BLOCKS"
   ) || [];
 
+  return (
+    <>
+      {/* Manual blocked reason */}
+      {blockedReason && (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+          <div className="flex items-center gap-2 text-destructive font-medium text-sm mb-1">
+            <Ban className="h-4 w-4" />
+            Manual Block
+          </div>
+          <p className="text-sm">{blockedReason}</p>
+        </div>
+      )}
+
+      {/* Blocking dependencies */}
+      {depsError ? (
+        <div className="text-sm text-destructive text-center py-4">
+          Failed to load dependencies
+        </div>
+      ) : depsLoading ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : blockingDeps.length > 0 ? (
+        <div>
+          <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+            <LinkIcon className="h-4 w-4" />
+            Blocking Dependencies ({blockingDeps.length})
+          </h4>
+          <div className="space-y-2">
+            {blockingDeps.map((dep) => (
+              <div
+                key={dep.id}
+                className="flex items-center justify-between bg-muted/50 rounded-lg p-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="h-2 w-2 rounded-full"
+                    style={{ backgroundColor: dep.release.service.color }}
+                  />
+                  <div>
+                    <p className="text-sm font-medium">
+                      {dep.release.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {dep.release.service.name}
+                      {dep.description && ` - ${dep.description}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="secondary"
+                    className={`${STATUS_COLORS[dep.release.status]} text-white text-xs`}
+                  >
+                    {STATUS_LABELS[dep.release.status]}
+                  </Badge>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={`/releases/${dep.release.id}`}>
+                      <ExternalLink className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : !blockedReason ? (
+        <div className="text-sm text-muted-foreground text-center py-2">
+          No specific blocking dependencies found
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function BlockedReleaseCard({ release }: { release: Release }) {
   return (
     <AccordionItem value={release.id} className="border rounded-lg mb-3">
       <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 rounded-t-lg">
@@ -134,7 +211,7 @@ function BlockedReleaseCard({ release }: { release: Release }) {
             <div className="flex items-center gap-2 mt-2 text-sm text-destructive">
               <AlertTriangle className="h-4 w-4 flex-shrink-0" />
               <span className="line-clamp-1">
-                {release.blockedReason || `Blocked by ${blockingDeps.length} unresolved dependencies`}
+                {release.blockedReason || "Blocked by unresolved dependencies"}
               </span>
             </div>
 
@@ -160,71 +237,11 @@ function BlockedReleaseCard({ release }: { release: Release }) {
 
       <AccordionContent className="px-4 pb-4">
         <div className="space-y-4 pt-2">
-          {/* Manual blocked reason */}
-          {release.blockedReason && (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-destructive font-medium text-sm mb-1">
-                <Ban className="h-4 w-4" />
-                Manual Block
-              </div>
-              <p className="text-sm">{release.blockedReason}</p>
-            </div>
-          )}
-
-          {/* Blocking dependencies */}
-          {depsLoading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : blockingDeps.length > 0 ? (
-            <div>
-              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                <LinkIcon className="h-4 w-4" />
-                Blocking Dependencies ({blockingDeps.length})
-              </h4>
-              <div className="space-y-2">
-                {blockingDeps.map((dep) => (
-                  <div
-                    key={dep.id}
-                    className="flex items-center justify-between bg-muted/50 rounded-lg p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="h-2 w-2 rounded-full"
-                        style={{ backgroundColor: dep.release.service.color }}
-                      />
-                      <div>
-                        <p className="text-sm font-medium">
-                          {dep.release.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {dep.release.service.name}
-                          {dep.description && ` - ${dep.description}`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className={`${STATUS_COLORS[dep.release.status]} text-white text-xs`}
-                      >
-                        {STATUS_LABELS[dep.release.status]}
-                      </Badge>
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/releases/${dep.release.id}`}>
-                          <ExternalLink className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : !release.blockedReason ? (
-            <div className="text-sm text-muted-foreground text-center py-2">
-              No specific blocking dependencies found
-            </div>
-          ) : null}
+          {/* Lazy-loaded dependencies - only fetches when accordion is expanded */}
+          <BlockedReleaseDependencies
+            releaseId={release.id}
+            blockedReason={release.blockedReason}
+          />
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-2 border-t">

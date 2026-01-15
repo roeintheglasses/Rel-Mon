@@ -13,6 +13,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
@@ -112,18 +113,20 @@ function ActivityItem({ activity }: ActivityItemProps) {
 
         <p className="text-muted-foreground mt-0.5">{activity.description}</p>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <p className="text-xs text-muted-foreground mt-1">
-              {formatDistanceToNow(new Date(activity.createdAt), {
-                addSuffix: true,
-              })}
-            </p>
-          </TooltipTrigger>
-          <TooltipContent>
-            {format(new Date(activity.createdAt), "PPpp")}
-          </TooltipContent>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p className="text-xs text-muted-foreground mt-1">
+                {formatDistanceToNow(new Date(activity.createdAt), {
+                  addSuffix: true,
+                })}
+              </p>
+            </TooltipTrigger>
+            <TooltipContent>
+              {format(new Date(activity.createdAt), "PPpp")}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
