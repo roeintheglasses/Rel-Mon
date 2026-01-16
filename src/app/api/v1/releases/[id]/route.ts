@@ -367,3 +367,34 @@ export const PATCH = withApiAuth(async (request: NextRequest, { team, params, ap
     );
   }
 });
+
+// DELETE /api/v1/releases/[id] - Delete a release
+export const DELETE = withApiAuth(async (request: NextRequest, { team, params }) => {
+  try {
+    const { id } = await params;
+
+    // Check if release exists and belongs to team
+    const existingRelease = await prisma.release.findFirst({
+      where: { id, teamId: team.id },
+    });
+
+    if (!existingRelease) {
+      return NextResponse.json(
+        { error: "Release not found" },
+        { status: 404 }
+      );
+    }
+
+    // Delete the release (cascades will handle related records)
+    await prisma.release.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to delete release" },
+      { status: 500 }
+    );
+  }
+});
