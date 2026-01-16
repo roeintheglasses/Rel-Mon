@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { createServiceSchema } from "@/lib/validations/service";
-import { Prisma } from "@/generated/prisma";
+import { Prisma } from "@prisma/client";
 
 /**
  * Convert text to URL-friendly slug
