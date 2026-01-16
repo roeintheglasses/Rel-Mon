@@ -1,0 +1,1380 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Rel-Mon Public API",
+    "description": "Public REST API for managing releases, sprints, and dependencies. Authenticated via team-scoped API keys with rate limiting (100 requests/minute per key).",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Rel-Mon Support"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.rel-mon.com/v1",
+      "description": "Production server"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Releases",
+      "description": "Create, read, update, and delete releases"
+    },
+    {
+      "name": "Dependencies",
+      "description": "Manage release dependencies"
+    },
+    {
+      "name": "Sprints",
+      "description": "Read sprint information (read-only)"
+    }
+  ],
+  "paths": {
+    "/releases": {
+      "get": {
+        "tags": ["Releases"],
+        "summary": "List all releases",
+        "description": "Retrieve a list of all releases for your team with optional filtering",
+        "operationId": "listReleases",
+        "parameters": [
+          {
+            "name": "sprintId",
+            "in": "query",
+            "description": "Filter by sprint ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "serviceId",
+            "in": "query",
+            "description": "Filter by service ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by single status",
+            "schema": {
+              "$ref": "#/components/schemas/ReleaseStatus"
+            }
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "description": "Filter by multiple statuses (comma-separated)",
+            "schema": {
+              "type": "string",
+              "example": "PLANNING,IN_DEVELOPMENT"
+            }
+          },
+          {
+            "name": "ownerId",
+            "in": "query",
+            "description": "Filter by owner user ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "isBlocked",
+            "in": "query",
+            "description": "Filter by blocked status",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of releases",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Release"
+                  }
+                }
+              }
+            },
+            "headers": {
+              "X-RateLimit-Limit": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Request limit per window"
+              },
+              "X-RateLimit-Remaining": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Remaining requests in current window"
+              },
+              "X-RateLimit-Reset": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Unix timestamp when the rate limit resets"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Releases"],
+        "summary": "Create a new release",
+        "description": "Create a new release for your team",
+        "operationId": "createRelease",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReleaseInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Release created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Release"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "Service or sprint not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/releases/{id}": {
+      "get": {
+        "tags": ["Releases"],
+        "summary": "Get a release by ID",
+        "description": "Retrieve full details of a specific release including items, dependencies, activities, and comments",
+        "operationId": "getReleaseById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Release ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Release details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "Release not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Releases"],
+        "summary": "Update a release",
+        "description": "Update release details including status, title, description, and blocked state",
+        "operationId": "updateRelease",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Release ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReleaseInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Release updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "Release not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Releases"],
+        "summary": "Delete a release",
+        "description": "Permanently delete a release and all its associated data (cascade delete)",
+        "operationId": "deleteRelease",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Release ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Release deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "Release not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/releases/{id}/dependencies": {
+      "get": {
+        "tags": ["Dependencies"],
+        "summary": "List release dependencies",
+        "description": "Get all dependencies and dependents for a specific release",
+        "operationId": "listDependencies",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Release ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dependency lists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dependsOn": {
+                      "type": "array",
+                      "description": "Releases that this release depends on",
+                      "items": {
+                        "$ref": "#/components/schemas/Dependency"
+                      }
+                    },
+                    "dependents": {
+                      "type": "array",
+                      "description": "Releases that depend on this release",
+                      "items": {
+                        "$ref": "#/components/schemas/Dependency"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "Release not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Dependencies"],
+        "summary": "Create a new dependency",
+        "description": "Add a dependency to a release. Validates against circular dependencies and duplicates.",
+        "operationId": "createDependency",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Dependent Release ID (the release that depends on another)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDependencyInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Dependency created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dependency"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "Release not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - circular dependency or duplicate detected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/releases/{id}/dependencies/{depId}": {
+      "get": {
+        "tags": ["Dependencies"],
+        "summary": "Get a dependency by ID",
+        "description": "Retrieve details of a specific dependency",
+        "operationId": "getDependencyById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Release ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "depId",
+            "in": "path",
+            "required": true,
+            "description": "Dependency ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dependency details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dependency"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "Release or dependency not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Dependencies"],
+        "summary": "Update a dependency",
+        "description": "Update dependency type, description, or resolution status",
+        "operationId": "updateDependency",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Release ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "depId",
+            "in": "path",
+            "required": true,
+            "description": "Dependency ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDependencyInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dependency updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dependency"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "Release or dependency not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Dependencies"],
+        "summary": "Delete a dependency",
+        "description": "Remove a dependency relationship between releases",
+        "operationId": "deleteDependency",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Release ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "depId",
+            "in": "path",
+            "required": true,
+            "description": "Dependency ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dependency deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "Release or dependency not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/sprints": {
+      "get": {
+        "tags": ["Sprints"],
+        "summary": "List all sprints",
+        "description": "Retrieve a list of all sprints for your team (read-only)",
+        "operationId": "listSprints",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by sprint status",
+            "schema": {
+              "$ref": "#/components/schemas/SprintStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of sprints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Sprint"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/sprints/{id}": {
+      "get": {
+        "tags": ["Sprints"],
+        "summary": "Get a sprint by ID",
+        "description": "Retrieve details of a specific sprint including releases (read-only)",
+        "operationId": "getSprintById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Sprint ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sprint details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SprintDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "description": "Sprint not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for authentication. Create API keys in the team settings."
+      }
+    },
+    "schemas": {
+      "ReleaseStatus": {
+        "type": "string",
+        "enum": [
+          "PLANNING",
+          "IN_DEVELOPMENT",
+          "IN_REVIEW",
+          "READY_STAGING",
+          "IN_STAGING",
+          "STAGING_VERIFIED",
+          "READY_PRODUCTION",
+          "DEPLOYED",
+          "CANCELLED",
+          "ROLLED_BACK"
+        ],
+        "description": "Release status in the deployment pipeline"
+      },
+      "SprintStatus": {
+        "type": "string",
+        "enum": [
+          "PLANNING",
+          "ACTIVE",
+          "COMPLETED",
+          "CANCELLED"
+        ],
+        "description": "Sprint status"
+      },
+      "DependencyType": {
+        "type": "string",
+        "enum": [
+          "BLOCKS",
+          "SOFT_DEPENDENCY",
+          "REQUIRES_SYNC"
+        ],
+        "description": "Type of dependency relationship"
+      },
+      "CreateReleaseInput": {
+        "type": "object",
+        "required": ["title", "serviceId"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Release title",
+            "example": "User Authentication Feature"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Detailed description of the release",
+            "example": "Implement OAuth 2.0 authentication with Google and GitHub providers"
+          },
+          "serviceId": {
+            "type": "string",
+            "description": "ID of the service this release belongs to",
+            "example": "clx1234567890"
+          },
+          "sprintId": {
+            "type": "string",
+            "description": "Optional sprint ID to associate this release with",
+            "example": "clx0987654321"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Version number or identifier",
+            "example": "v2.3.0"
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Target deployment date (ISO 8601 format or YYYY-MM-DD)",
+            "example": "2026-02-15T00:00:00Z"
+          },
+          "ownerId": {
+            "type": "string",
+            "description": "Optional user ID for the release owner",
+            "example": "clx1122334455"
+          }
+        }
+      },
+      "UpdateReleaseInput": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Release title"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Detailed description of the release"
+          },
+          "serviceId": {
+            "type": "string",
+            "description": "ID of the service this release belongs to"
+          },
+          "sprintId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Sprint ID to associate this release with"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "Version number or identifier"
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Target deployment date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReleaseStatus"
+          },
+          "isBlocked": {
+            "type": "boolean",
+            "description": "Whether the release is blocked"
+          },
+          "blockedReason": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true,
+            "description": "Reason for blocking (required if isBlocked is true)"
+          }
+        }
+      },
+      "CreateDependencyInput": {
+        "type": "object",
+        "required": ["blockingReleaseId"],
+        "properties": {
+          "blockingReleaseId": {
+            "type": "string",
+            "description": "ID of the release that blocks this one",
+            "example": "clx9876543210"
+          },
+          "type": {
+            "$ref": "#/components/schemas/DependencyType"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Description of the dependency relationship",
+            "example": "Requires API endpoints from authentication service"
+          }
+        }
+      },
+      "UpdateDependencyInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/DependencyType"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Description of the dependency relationship"
+          },
+          "isResolved": {
+            "type": "boolean",
+            "description": "Whether the dependency has been resolved"
+          }
+        }
+      },
+      "Service": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx1234567890"
+          },
+          "name": {
+            "type": "string",
+            "example": "API Service"
+          },
+          "color": {
+            "type": "string",
+            "example": "#3B82F6"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx1122334455"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true,
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true,
+            "example": "Doe"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "john.doe@example.com"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://example.com/avatar.jpg"
+          }
+        }
+      },
+      "Sprint": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx0987654321"
+          },
+          "name": {
+            "type": "string",
+            "example": "Sprint 42"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SprintStatus"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-01T00:00:00Z"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-14T23:59:59Z"
+          },
+          "_count": {
+            "type": "object",
+            "properties": {
+              "releases": {
+                "type": "integer",
+                "example": 8
+              }
+            }
+          }
+        }
+      },
+      "SprintDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Sprint"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "releases": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Release"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Release": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx1234567890"
+          },
+          "title": {
+            "type": "string",
+            "example": "User Authentication Feature"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Implement OAuth 2.0 authentication"
+          },
+          "version": {
+            "type": "string",
+            "nullable": true,
+            "example": "v2.3.0"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReleaseStatus"
+          },
+          "isBlocked": {
+            "type": "boolean",
+            "example": false
+          },
+          "blockedReason": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-02-15T00:00:00Z"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-10T08:30:00Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-15T14:22:00Z"
+          },
+          "service": {
+            "$ref": "#/components/schemas/Service"
+          },
+          "sprint": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Sprint"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "owner": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "nullable": true
+              }
+            ]
+          },
+          "_count": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "integer",
+                "example": 5
+              },
+              "dependsOn": {
+                "type": "integer",
+                "example": 2
+              },
+              "dependents": {
+                "type": "integer",
+                "example": 1
+              }
+            }
+          }
+        }
+      },
+      "ReleaseDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Release"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "description": "Release items/tasks",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "dependsOn": {
+                "type": "array",
+                "description": "Dependencies on other releases",
+                "items": {
+                  "$ref": "#/components/schemas/Dependency"
+                }
+              },
+              "dependents": {
+                "type": "array",
+                "description": "Releases that depend on this one",
+                "items": {
+                  "$ref": "#/components/schemas/Dependency"
+                }
+              },
+              "activities": {
+                "type": "array",
+                "description": "Activity log",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "comments": {
+                "type": "array",
+                "description": "Comments on the release",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Dependency": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clx5566778899"
+          },
+          "type": {
+            "$ref": "#/components/schemas/DependencyType"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Requires API endpoints from authentication service"
+          },
+          "isResolved": {
+            "type": "boolean",
+            "example": false
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-12T10:15:00Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-01-12T10:15:00Z"
+          },
+          "blockingRelease": {
+            "type": "object",
+            "description": "The release that blocks (for dependsOn list)",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string",
+                "nullable": true
+              },
+              "status": {
+                "$ref": "#/components/schemas/ReleaseStatus"
+              },
+              "service": {
+                "$ref": "#/components/schemas/Service"
+              }
+            }
+          },
+          "dependentRelease": {
+            "type": "object",
+            "description": "The release that is blocked (for dependents list)",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string",
+                "nullable": true
+              },
+              "status": {
+                "$ref": "#/components/schemas/ReleaseStatus"
+              },
+              "service": {
+                "$ref": "#/components/schemas/Service"
+              }
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message",
+            "example": "Resource not found"
+          },
+          "details": {
+            "type": "object",
+            "description": "Additional error details (for validation errors)",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "Authentication failed - invalid or missing API key",
+        "headers": {
+          "WWW-Authenticate": {
+            "schema": {
+              "type": "string"
+            },
+            "description": "Authentication scheme"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Invalid or missing API key"
+            }
+          }
+        }
+      },
+      "RateLimitError": {
+        "description": "Rate limit exceeded (100 requests per minute)",
+        "headers": {
+          "X-RateLimit-Limit": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Request limit per window"
+          },
+          "X-RateLimit-Remaining": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Remaining requests (will be 0)"
+          },
+          "X-RateLimit-Reset": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Unix timestamp when rate limit resets"
+          },
+          "Retry-After": {
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Seconds until rate limit resets"
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Rate limit exceeded. Please try again later."
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Request validation failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Invalid request data",
+              "details": {
+                "title": "Title is required"
+              }
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Internal server error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

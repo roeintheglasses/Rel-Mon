@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks/(.*)",
   "/api/invitations/(.*)",
   "/api/v1/(.*)", // Public API routes use API key authentication
+  "/openapi.json", // OpenAPI specification
 ]);
 
 // Define routes that require an organization to be selected
