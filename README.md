@@ -472,6 +472,15 @@ Test files are located in:
 - `src/test/` - Test setup and utilities
 - `**/*.test.ts` or `**/*.test.tsx` - Component and unit tests
 
+## 📚 Documentation
+
+Comprehensive documentation is available to help you understand and work with Release Coordinator:
+
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design, data models, integration flows, and design decisions
+- **[User Guide](docs/USER_GUIDE.md)** - Complete feature documentation for teams, releases, sprints, and integrations
+- **[API Reference](docs/API.md)** - REST API documentation with request/response schemas and examples
+- **[Development Guide](docs/DEVELOPMENT.md)** - Project structure, coding conventions, and development workflows
+
 ## 📁 Project Structure
 
 ```
@@ -553,10 +562,12 @@ When reporting bugs, please include:
 
 ## 🆘 Support
 
-- **Documentation**: [Link to full documentation]
-- **Issues**: [GitHub Issues](link-to-issues)
-- **Discussions**: [GitHub Discussions](link-to-discussions)
-- **Email**: [support@example.com]
+Need help? Here's where to find it:
+
+- **Documentation**: See the [📚 Documentation](#-documentation) section above for comprehensive guides
+- **Troubleshooting**: Check the [Troubleshooting Guide](docs/DEVELOPMENT.md#troubleshooting) for common issues
+- **User Guide**: See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for feature-specific help
+- **Issues**: Report bugs or request features via your project's issue tracker
 
 ## 🙏 Acknowledgments
 
