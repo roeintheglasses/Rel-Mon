@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withApiAuth } from "@/lib/public-api-handler";
 import { updateReleaseSchema, ReleaseStatus } from "@/lib/validations/release";
-import { recalculateDependentBlockedStatus } from "@/services/blocked-status";
+import { recalculateBlockedStatus, recalculateDependentBlockedStatus } from "@/services/blocked-status";
 import {
   handleStatusChangeNotifications,
   handleBlockedChangeNotifications,
@@ -203,6 +203,7 @@ export const PATCH = withApiAuth(async (request: NextRequest, { team, params, ap
         isBlocked: true,
         blockedReason: true,
         deploymentGroupId: true,
+        ownerId: true,
       },
     });
 
@@ -211,6 +212,50 @@ export const PATCH = withApiAuth(async (request: NextRequest, { team, params, ap
         { error: "Release not found" },
         { status: 404 }
       );
+    }
+
+    // Validate serviceId belongs to team if provided
+    if (data.serviceId !== undefined) {
+      const service = await prisma.service.findFirst({
+        where: { id: data.serviceId, teamId: team.id },
+      });
+      if (!service) {
+        return NextResponse.json(
+          { error: "Service not found or does not belong to team" },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Validate sprintId belongs to team if provided
+    if (data.sprintId !== undefined && data.sprintId !== null) {
+      const sprint = await prisma.sprint.findFirst({
+        where: { id: data.sprintId, teamId: team.id },
+      });
+      if (!sprint) {
+        return NextResponse.json(
+          { error: "Sprint not found or does not belong to team" },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Validate ownerId belongs to team if provided
+    if (data.ownerId !== undefined && data.ownerId !== null) {
+      const owner = await prisma.user.findFirst({
+        where: {
+          id: data.ownerId,
+          memberships: {
+            some: { teamId: team.id },
+          },
+        },
+      });
+      if (!owner) {
+        return NextResponse.json(
+          { error: "Owner not found or does not belong to team" },
+          { status: 404 }
+        );
+      }
     }
 
     // Track changes for activity log
@@ -235,6 +280,11 @@ export const PATCH = withApiAuth(async (request: NextRequest, { team, params, ap
 
     if (data.sprintId !== undefined) {
       updateData.sprintId = data.sprintId;
+    }
+
+    if (data.ownerId !== undefined && data.ownerId !== oldRelease.ownerId) {
+      changes.ownerId = { from: oldRelease.ownerId, to: data.ownerId };
+      updateData.ownerId = data.ownerId;
     }
 
     if (data.version !== undefined) {
@@ -268,6 +318,14 @@ export const PATCH = withApiAuth(async (request: NextRequest, { team, params, ap
 
     if (data.blockedReason !== undefined) {
       updateData.blockedReason = data.blockedReason;
+    }
+
+    // Guard against empty updates
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: "No valid update fields provided" },
+        { status: 400 }
+      );
     }
 
     // Update the release
@@ -408,8 +466,10 @@ export const DELETE = withApiAuth(async (request: NextRequest, { team, params })
     });
 
     // Recalculate blocked status for dependent releases
+    // Use recalculateBlockedStatus (not recalculateDependentBlockedStatus) since we have
+    // the dependent release IDs and want to recalculate each one's blocked status
     for (const dep of dependentReleases) {
-      await recalculateDependentBlockedStatus(dep.dependentReleaseId);
+      await recalculateBlockedStatus(dep.dependentReleaseId);
     }
 
     return NextResponse.json({ success: true });

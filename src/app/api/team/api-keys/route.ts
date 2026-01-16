@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { createApiKeySchema } from "@/lib/validations/api-key";
+import { ZodError } from "zod";
 import { generateApiKey, hashApiKey } from "@/lib/api-key-manager";
 
 // GET /api/team/api-keys - List all API keys for the current team
@@ -65,7 +66,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
+
     const validatedData = createApiKeySchema.parse(body);
 
     // Generate the plaintext key
@@ -112,9 +122,9 @@ export async function POST(request: Request) {
       key: plaintextKey,
     }, { status: 201 });
   } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: "Invalid request data", details: error },
+        { error: "Invalid request data", details: error.flatten() },
         { status: 400 }
       );
     }

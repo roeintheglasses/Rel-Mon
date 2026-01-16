@@ -203,15 +203,16 @@ async function testReleasesAPI() {
 
   let createdReleaseId: string | null = null;
 
-  // Test 2.1: List releases
+  // Test 2.1: List releases (paginated response)
   try {
     const res = await makeRequest(`${API_BASE}/api/v1/releases`, {
       headers: { 'X-API-Key': API_KEY },
     });
+    const hasPaginatedResponse = res.status === 200 && res.body?.data && Array.isArray(res.body.data) && res.body?.pagination;
     logTest(
       'GET /api/v1/releases returns 200',
-      res.status === 200 && Array.isArray(res.body),
-      res.status !== 200 ? `Expected 200, got ${res.status}` : !Array.isArray(res.body) ? 'Response is not an array' : undefined
+      hasPaginatedResponse,
+      res.status !== 200 ? `Expected 200, got ${res.status}` : !hasPaginatedResponse ? 'Response.data is not an array or missing pagination' : undefined
     );
   } catch (err: any) {
     logTest('GET /api/v1/releases returns 200', false, err.message);
@@ -224,8 +225,8 @@ async function testReleasesAPI() {
       headers: { 'X-API-Key': API_KEY },
     });
 
-    if (listRes.body && Array.isArray(listRes.body) && listRes.body.length > 0) {
-      const existingRelease = listRes.body[0];
+    if (listRes.body?.data && Array.isArray(listRes.body.data) && listRes.body.data.length > 0) {
+      const existingRelease = listRes.body.data[0];
       const serviceId = existingRelease.service?.id;
       const sprintId = existingRelease.sprint?.id;
 
@@ -320,8 +321,8 @@ async function testDependenciesAPI(releaseId: string) {
       headers: { 'X-API-Key': API_KEY },
     });
 
-    if (listRes.body && Array.isArray(listRes.body)) {
-      const otherRelease = listRes.body.find((r: any) => r.id !== releaseId);
+    if (listRes.body?.data && Array.isArray(listRes.body.data)) {
+      const otherRelease = listRes.body.data.find((r: any) => r.id !== releaseId);
       if (otherRelease) {
         dependencyReleaseId = otherRelease.id;
       }
@@ -344,7 +345,7 @@ async function testDependenciesAPI(releaseId: string) {
         method: 'POST',
         headers: { 'X-API-Key': API_KEY },
         body: {
-          dependsOnId: dependencyReleaseId,
+          blockingReleaseId: dependencyReleaseId,
           type: 'BLOCKS',
           description: 'E2E test dependency',
         },
@@ -633,7 +634,9 @@ function displayResults() {
     console.log();
   }
 
-  const passRate = ((results.passed / results.tests.length) * 100).toFixed(1);
+  const passRate = results.tests.length > 0
+    ? ((results.passed / results.tests.length) * 100).toFixed(1)
+    : '0.0';
   console.log(`Pass Rate: ${passRate}%\n`);
 
   process.exit(results.failed > 0 ? 1 : 0);

@@ -20,26 +20,30 @@ export const GET = withApiAuth(async (request: NextRequest, { team }) => {
     const ownerId = searchParams.get("ownerId");
     const isBlocked = searchParams.get("isBlocked");
 
-    // Pagination parameters
-    const page = Math.max(1, parseInt(searchParams.get("page") || String(DEFAULT_PAGE), 10));
-    const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(searchParams.get("limit") || String(DEFAULT_LIMIT), 10)));
+    // Pagination parameters with NaN handling
+    const parsedPage = parseInt(searchParams.get("page") || String(DEFAULT_PAGE), 10);
+    const parsedLimit = parseInt(searchParams.get("limit") || String(DEFAULT_LIMIT), 10);
+    const page = Number.isFinite(parsedPage) ? Math.max(1, parsedPage) : DEFAULT_PAGE;
+    const limit = Number.isFinite(parsedLimit) ? Math.min(MAX_LIMIT, Math.max(1, parsedLimit)) : DEFAULT_LIMIT;
     const skip = (page - 1) * limit;
 
     // Build status filter with validation
     let statusFilter = {};
     if (statuses) {
-      const statusList = statuses
-        .split(",")
-        .filter((s) => releaseStatusEnum.safeParse(s).success) as ReleaseStatus[];
-      if (statusList.length > 0) {
-        statusFilter = { status: { in: statusList } };
-      } else {
-        // All provided statuses were invalid
+      const statusList = statuses.split(",").map((s) => s.trim());
+      // Validate ALL statuses - fail if any is invalid
+      const invalidStatuses = statusList.filter((s) => !releaseStatusEnum.safeParse(s).success);
+      if (invalidStatuses.length > 0) {
         return NextResponse.json(
-          { error: "Invalid status values provided", validStatuses: releaseStatusEnum.options },
+          {
+            error: "Invalid status values provided",
+            invalidStatuses,
+            validStatuses: releaseStatusEnum.options
+          },
           { status: 400 }
         );
       }
+      statusFilter = { status: { in: statusList as ReleaseStatus[] } };
     } else if (status) {
       if (releaseStatusEnum.safeParse(status).success) {
         statusFilter = { status: status as ReleaseStatus };
@@ -129,7 +133,16 @@ export const GET = withApiAuth(async (request: NextRequest, { team }) => {
 // POST /api/v1/releases - Create a new release
 export const POST = withApiAuth(async (request: NextRequest, { team }) => {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
+
     const validatedData = createReleaseSchema.parse(body);
 
     // Verify service belongs to team
