@@ -3,6 +3,10 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { updateReleaseSchema, ReleaseStatus } from "@/lib/validations/release";
 import { recalculateDependentBlockedStatus } from "@/services/blocked-status";
+import {
+  handleStatusChangeNotifications,
+  handleBlockedChangeNotifications,
+} from "@/services/notification-service";
 
 // Helper to update deployment group status based on child releases
 async function updateDeploymentGroupStatus(
@@ -259,6 +263,12 @@ export async function PATCH(
         updateData.prodDeployedAt = new Date();
       }
     }
+    if (validatedData.isBlocked !== undefined) {
+      updateData.isBlocked = validatedData.isBlocked;
+    }
+    if (validatedData.blockedReason !== undefined) {
+      updateData.blockedReason = validatedData.blockedReason;
+    }
 
     const release = await prisma.release.update({
       where: { id },
@@ -312,6 +322,31 @@ export async function PATCH(
         console.error("Failed to update deployment group status:", err);
         // Continue - main operation succeeded
       }
+    }
+
+    // Send Slack notifications (fire-and-forget)
+    if (validatedData.status && validatedData.status !== existingRelease.status) {
+      handleStatusChangeNotifications(
+        team.id,
+        id,
+        existingRelease.status as ReleaseStatus,
+        validatedData.status as ReleaseStatus
+      ).catch((err) => {
+        console.error("Failed to send status change notification:", err);
+      });
+    }
+
+    // Handle blocked status change notifications
+    if (validatedData.isBlocked !== undefined && validatedData.isBlocked !== existingRelease.isBlocked) {
+      handleBlockedChangeNotifications(
+        team.id,
+        id,
+        existingRelease.isBlocked,
+        validatedData.isBlocked,
+        validatedData.blockedReason || null
+      ).catch((err) => {
+        console.error("Failed to send blocked change notification:", err);
+      });
     }
 
     return NextResponse.json(release);

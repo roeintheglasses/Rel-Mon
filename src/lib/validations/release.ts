@@ -24,6 +24,8 @@ export const createReleaseSchema = z.object({
 
 export const updateReleaseSchema = createReleaseSchema.partial().extend({
   status: releaseStatusEnum.optional(),
+  isBlocked: z.boolean().optional(),
+  blockedReason: z.string().max(500).nullable().optional(),
 });
 
 export type CreateReleaseInput = z.infer<typeof createReleaseSchema>;

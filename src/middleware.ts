@@ -8,6 +8,7 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/invite/(.*)",
   "/api/webhooks/(.*)",
+  "/api/invitations/(.*)",
 ]);
 
 // Define routes that require an organization to be selected
