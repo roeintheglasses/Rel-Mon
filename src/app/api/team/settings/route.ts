@@ -27,7 +27,11 @@ const updateSettingsSchema = z.object({
   notifyOnReadyToDeploy: z.boolean().optional(),
 });
 
-// GET - Get team settings
+/**
+ * GET /api/team/settings - Get team settings
+ * @description Fetches team settings with masked Slack webhook URL for security
+ * @returns JSON of team settings with masked sensitive data
+ */
 export async function GET() {
   try {
     const { orgId } = await auth();
@@ -73,7 +77,12 @@ export async function GET() {
   }
 }
 
-// PATCH - Update team settings
+/**
+ * PATCH /api/team/settings - Update team settings
+ * @description Updates team settings with permission check (OWNER/ADMIN only)
+ * @param request - HTTP request with settings data in body
+ * @returns JSON of updated team settings with masked sensitive data
+ */
 export async function PATCH(request: NextRequest) {
   try {
     const { orgId, userId } = await auth();

@@ -9,7 +9,7 @@ datasource db {
 
 model Team {
   id                    String            @id @default(cuid())
-  clerkOrgId            String            @unique
+  clerkOrgId            String            @unique // Clerk organization ID
   name                  String
   slug                  String            @unique
   slackWebhookUrl       String?
@@ -31,7 +31,7 @@ model Team {
 
 model User {
   id               String            @id @default(cuid())
-  clerkUserId      String            @unique
+  clerkUserId      String            @unique // Clerk user ID
   email            String            @unique
   firstName        String?
   lastName         String?
@@ -41,7 +41,7 @@ model User {
   activities       Activity[]
   comments         Comment[]
   ownedGroups      DeploymentGroup[] @relation("GroupOwner")
-  oauthConnections OAuthConnection[]
+  oauthConnections OAuthConnection[] // GitHub, Jira tokens (encrypted)
   ownedReleases    Release[]         @relation("ReleaseOwner")
   memberships      TeamMember[]
 
@@ -82,13 +82,13 @@ model OAuthConnection {
   id             String        @id @default(cuid())
   userId         String
   provider       OAuthProvider
-  accessToken    String
-  refreshToken   String?
+  accessToken    String        // Encrypted
+  refreshToken   String?       // For token refresh
   tokenExpiresAt DateTime?
   providerUserId String?
   providerEmail  String?
-  cloudId        String?
-  resourceUrl    String?
+  cloudId        String?       // Jira Cloud ID
+  resourceUrl    String?       // Base URL for API calls
   scopes         String[]
   isValid        Boolean       @default(true)
   lastUsedAt     DateTime?
@@ -109,10 +109,10 @@ model Service {
   name           String
   slug           String
   description    String?
-  repoOwner      String?
-  repoName       String?
+  repoOwner      String?   // GitHub org/user
+  repoName       String?   // GitHub repo
   repoUrl        String?
-  jiraProjectKey String?
+  jiraProjectKey String?   // e.g., "PROJ"
   color          String    @default("#6366f1")
   isActive       Boolean   @default(true)
   createdAt      DateTime  @default(now())
@@ -151,7 +151,7 @@ model DeploymentGroup {
   name          String
   description   String?
   deployOrder   DeployOrder           @default(SEQUENTIAL)
-  orderSequence String[]
+  orderSequence String[]              // Release IDs in deployment order
   targetDate    DateTime?
   deployedAt    DateTime?
   status        DeploymentGroupStatus @default(PENDING)
@@ -210,8 +210,8 @@ model Release {
 model ReleaseItem {
   id           String          @id @default(cuid())
   releaseId    String
-  type         ReleaseItemType
-  externalId   String
+  type         ReleaseItemType // JIRA_TICKET or GITHUB_PR
+  externalId   String          // e.g., "PROJ-123" or PR number
   externalUrl  String?
   title        String?
   status       String?
@@ -229,8 +229,8 @@ model ReleaseItem {
 
 model ReleaseDependency {
   id                 String         @id @default(cuid())
-  dependentReleaseId String
-  blockingReleaseId  String
+  dependentReleaseId String         // The blocked release
+  blockingReleaseId  String         // Must complete first
   type               DependencyType @default(BLOCKS)
   description        String?
   isResolved         Boolean        @default(false)
@@ -255,7 +255,7 @@ model Activity {
   metadata    Json?
   createdAt   DateTime     @default(now())
   release     Release?     @relation(fields: [releaseId], references: [id], onDelete: Cascade)
-  user        User?        @relation(fields: [userId], references: [id])
+  user        User?        @relation(fields: [userId], references: [id]) // Preserve history if user deleted
 
   @@index([releaseId])
   @@index([userId])

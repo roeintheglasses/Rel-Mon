@@ -3,7 +3,12 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { createSprintSchema } from "@/lib/validations/sprint";
 
-// GET /api/sprints - List all sprints for the current team
+/**
+ * GET /api/sprints - List all sprints for the current team
+ * @description Fetches sprints with optional status filter and release count
+ * @param request - HTTP request with optional status query parameter
+ * @returns JSON array of sprints ordered by start date
+ */
 export async function GET(request: Request) {
   try {
     const { orgId } = await auth();
@@ -46,7 +51,12 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/sprints - Create a new sprint
+/**
+ * POST /api/sprints - Create a new sprint
+ * @description Creates a new sprint with date validation
+ * @param request - HTTP request with sprint data in body
+ * @returns JSON of created sprint
+ */
 export async function POST(request: Request) {
   try {
     const { orgId } = await auth();

@@ -1,9 +1,15 @@
+import "server-only";
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
 const AUTH_TAG_LENGTH = 16;
 
+/**
+ * Gets and validates the encryption key from environment variables
+ * @returns The encryption key as a Buffer
+ * @throws Error if key is not set or has invalid length
+ */
 function getEncryptionKey(): Buffer {
   const key = process.env.TOKEN_ENCRYPTION_KEY;
   if (!key) {
@@ -17,6 +23,11 @@ function getEncryptionKey(): Buffer {
   return keyBuffer;
 }
 
+/**
+ * Encrypts a token using AES-256-GCM encryption
+ * @param plaintext - The plaintext token to encrypt
+ * @returns The encrypted token in format "iv:authTag:encryptedData" (all base64)
+ */
 export function encryptToken(plaintext: string): string {
   const key = getEncryptionKey();
   const iv = randomBytes(IV_LENGTH);
@@ -32,6 +43,12 @@ export function encryptToken(plaintext: string): string {
   return `${iv.toString("base64")}:${authTag.toString("base64")}:${encrypted}`;
 }
 
+/**
+ * Decrypts a token that was encrypted with encryptToken
+ * @param encryptedData - The encrypted token string in format "iv:authTag:encryptedData"
+ * @returns The decrypted plaintext token
+ * @throws Error if data format is invalid or decryption fails
+ */
 export function decryptToken(encryptedData: string): string {
   const key = getEncryptionKey();
 
@@ -60,7 +77,10 @@ export function decryptToken(encryptedData: string): string {
   return decrypted;
 }
 
-// Utility to generate a new encryption key (run once to generate)
+/**
+ * Utility to generate a new encryption key (run once to generate)
+ * @returns A new 32-byte encryption key encoded as base64
+ */
 export function generateEncryptionKey(): string {
   return randomBytes(32).toString("base64");
 }

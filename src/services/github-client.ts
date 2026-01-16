@@ -47,6 +47,12 @@ export interface GitHubRepo {
   };
 }
 
+/**
+ * Gets a valid GitHub access token for the user
+ * @param userId - The ID of the user
+ * @returns The decrypted access token
+ * @throws Error if GitHub is not connected or connection is invalid
+ */
 async function getValidAccessToken(userId: string): Promise<string> {
   const connection = await prisma.oAuthConnection.findUnique({
     where: {
@@ -72,6 +78,14 @@ async function getValidAccessToken(userId: string): Promise<string> {
   return accessToken;
 }
 
+/**
+ * Makes an authenticated request to the GitHub API
+ * @param userId - The ID of the user making the request
+ * @param endpoint - The GitHub API endpoint (e.g., "/user/repos")
+ * @param options - Optional fetch configuration
+ * @returns The fetch response object
+ * @throws Error if authentication fails
+ */
 async function githubFetch(
   userId: string,
   endpoint: string,
@@ -115,6 +129,14 @@ async function githubFetch(
   return response;
 }
 
+/**
+ * Searches GitHub pull requests using GitHub's search API
+ * @param userId - The ID of the user performing the search
+ * @param query - The search query string (caller should include 'type:pr' if needed)
+ * @param perPage - Number of results per page (default: 20)
+ * @returns Search results with PRs, total count, and pagination info
+ * @throws Error if search fails
+ */
 export async function searchGitHubPRs(
   userId: string,
   query: string,
@@ -143,6 +165,16 @@ export async function searchGitHubPRs(
   return response.json();
 }
 
+/**
+ * Gets pull requests for a specific repository
+ * @param userId - The ID of the user
+ * @param owner - The repository owner username
+ * @param repo - The repository name
+ * @param state - Filter by PR state: open, closed, or all (default: "open")
+ * @param perPage - Number of results per page (default: 30)
+ * @returns Array of pull request objects
+ * @throws Error if request fails
+ */
 export async function getRepoPRs(
   userId: string,
   owner: string,
@@ -169,6 +201,15 @@ export async function getRepoPRs(
   return response.json();
 }
 
+/**
+ * Gets a specific pull request by number
+ * @param userId - The ID of the user
+ * @param owner - The repository owner username
+ * @param repo - The repository name
+ * @param prNumber - The pull request number
+ * @returns The pull request object
+ * @throws Error if PR not found or request fails
+ */
 export async function getPR(
   userId: string,
   owner: string,
@@ -187,6 +228,13 @@ export async function getPR(
   return response.json();
 }
 
+/**
+ * Gets all repositories for the authenticated user
+ * @param userId - The ID of the user
+ * @param perPage - Number of results per page (default: 100)
+ * @returns Array of repository objects
+ * @throws Error if request fails
+ */
 export async function getUserRepos(
   userId: string,
   perPage: number = 100
@@ -206,6 +254,14 @@ export async function getUserRepos(
   return response.json();
 }
 
+/**
+ * Searches GitHub repositories
+ * @param userId - The ID of the user performing the search
+ * @param query - The search query string
+ * @param perPage - Number of results per page (default: 20)
+ * @returns Object containing array of matching repositories
+ * @throws Error if search fails
+ */
 export async function searchRepos(
   userId: string,
   query: string,
@@ -230,6 +286,16 @@ export async function searchRepos(
   return response.json();
 }
 
+/**
+ * Searches pull requests within a specific repository
+ * @param userId - The ID of the user performing the search
+ * @param owner - The repository owner username
+ * @param repo - The repository name
+ * @param searchText - Optional text to search for in PRs
+ * @param state - Filter by PR state: open, closed, or all (default: "all")
+ * @param perPage - Number of results per page (default: 20)
+ * @returns Search results with PRs and pagination info
+ */
 export async function searchPRsByRepo(
   userId: string,
   owner: string,
@@ -251,10 +317,22 @@ export async function searchPRsByRepo(
   return searchGitHubPRs(userId, query, perPage);
 }
 
+/**
+ * Constructs the GitHub URL for a pull request
+ * @param owner - The repository owner username
+ * @param repo - The repository name
+ * @param prNumber - The pull request number
+ * @returns The full GitHub URL to the pull request
+ */
 export function getPRUrl(owner: string, repo: string, prNumber: number): string {
   return `https://github.com/${owner}/${repo}/pull/${prNumber}`;
 }
 
+/**
+ * Determines the status of a pull request
+ * @param pr - The pull request object
+ * @returns The status string: "merged", "closed", "draft", or "open"
+ */
 export function getPRStatus(pr: GitHubPullRequest): string {
   if (pr.merged_at) {
     return "merged";

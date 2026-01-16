@@ -50,6 +50,12 @@ interface OAuthConnection {
   isValid: boolean;
 }
 
+/**
+ * Refreshes an expired Jira OAuth token using the refresh token
+ * @param connection - The OAuth connection object with refresh token
+ * @returns The new decrypted access token
+ * @throws Error if refresh token is missing or refresh fails
+ */
 async function refreshJiraToken(connection: OAuthConnection): Promise<string> {
   if (!connection.refreshToken) {
     throw new Error("No refresh token available");
@@ -92,6 +98,19 @@ async function refreshJiraToken(connection: OAuthConnection): Promise<string> {
 
   const tokens = await response.json();
 
+  // Validate token response structure
+  if (!tokens.access_token || typeof tokens.access_token !== "string") {
+    await prisma.oAuthConnection.update({
+      where: { id: connection.id },
+      data: {
+        isValid: false,
+        lastErrorAt: new Date(),
+        lastError: "Invalid token response from Jira",
+      },
+    });
+    throw new Error("Invalid token response from Jira");
+  }
+
   // Encrypt and store new tokens
   const encryptedAccessToken = encryptToken(tokens.access_token);
   const encryptedRefreshToken = tokens.refresh_token
@@ -113,6 +132,12 @@ async function refreshJiraToken(connection: OAuthConnection): Promise<string> {
   return tokens.access_token;
 }
 
+/**
+ * Gets a valid Jira access token for the user, refreshing if expired
+ * @param userId - The ID of the user
+ * @returns Object containing the decrypted access token and cloud ID
+ * @throws Error if Jira is not connected or token cannot be refreshed
+ */
 async function getValidAccessToken(userId: string): Promise<{ token: string; cloudId: string }> {
   const connection = await prisma.oAuthConnection.findUnique({
     where: {
@@ -165,6 +190,15 @@ async function getValidAccessToken(userId: string): Promise<{ token: string; clo
   return { token: accessToken, cloudId: connection.cloudId };
 }
 
+/**
+ * Searches Jira issues using JQL (Jira Query Language)
+ * @param userId - The ID of the user performing the search
+ * @param jql - The JQL query string
+ * @param maxResults - Maximum number of results to return (default: 50)
+ * @param startAt - Pagination offset (default: 0)
+ * @returns Search results containing issues, total count, and pagination info
+ * @throws Error if authentication fails or search request fails
+ */
 export async function searchJiraIssues(
   userId: string,
   jql: string,
@@ -231,6 +265,13 @@ export async function searchJiraIssues(
   return response.json();
 }
 
+/**
+ * Gets a single Jira issue by its key
+ * @param userId - The ID of the user
+ * @param issueKey - The Jira issue key (e.g., "PROJ-123")
+ * @returns The Jira issue with all fields
+ * @throws Error if issue not found or request fails
+ */
 export async function getJiraIssue(
   userId: string,
   issueKey: string
@@ -248,6 +289,27 @@ export async function getJiraIssue(
   );
 
   if (!response.ok) {
+    // Handle 401 consistently with searchJiraIssues - mark connection as invalid
+    if (response.status === 401) {
+      const connection = await prisma.oAuthConnection.findUnique({
+        where: {
+          userId_provider: {
+            userId,
+            provider: "JIRA",
+          },
+        },
+      });
+      if (connection) {
+        await prisma.oAuthConnection.update({
+          where: { id: connection.id },
+          data: {
+            isValid: false,
+            lastErrorAt: new Date(),
+            lastError: "Authentication failed",
+          },
+        });
+      }
+    }
     throw new Error(`Failed to get Jira issue ${issueKey}`);
   }
 
@@ -256,12 +318,22 @@ export async function getJiraIssue(
 
 /**
  * Escapes special JQL characters to prevent injection attacks
+ * @param value - The string value to escape
+ * @returns The escaped string safe for use in JQL queries
  */
 function escapeJql(value: string): string {
   // Escape backslashes first, then quotes
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
+/**
+ * Searches Jira issues by text with optional project filtering
+ * @param userId - The ID of the user performing the search
+ * @param searchText - The text to search for in issues
+ * @param projectKey - Optional project key to limit search scope
+ * @param maxResults - Maximum number of results to return (default: 20)
+ * @returns Search results containing matching issues
+ */
 export async function searchJiraByText(
   userId: string,
   searchText: string,
@@ -280,6 +352,13 @@ export async function searchJiraByText(
   return searchJiraIssues(userId, jql, maxResults);
 }
 
+/**
+ * Gets the full URL for a Jira issue
+ * @param userId - The ID of the user
+ * @param cloudId - The Jira cloud ID
+ * @param issueKey - The Jira issue key (e.g., "PROJ-123")
+ * @returns The full URL to view the issue in Jira
+ */
 export async function getJiraIssueUrl(userId: string, cloudId: string, issueKey: string): Promise<string> {
   // Get the resource URL from the connection, scoped to the user
   const connection = await prisma.oAuthConnection.findFirst({
@@ -294,6 +373,6 @@ export async function getJiraIssueUrl(userId: string, cloudId: string, issueKey:
     return `${connection.resourceUrl}/browse/${issueKey}`;
   }
 
-  // Fallback
-  return `https://atlassian.net/browse/${issueKey}`;
+  // No resourceUrl available - cannot construct valid Jira URL without tenant subdomain
+  throw new Error(`Unable to construct Jira URL: no resource URL configured for cloud ID ${cloudId}`);
 }
