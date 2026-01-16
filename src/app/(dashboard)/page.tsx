@@ -25,28 +25,7 @@ import {
   Loader2,
   Plus,
 } from "lucide-react";
-
-const STATUS_LABELS: Record<string, string> = {
-  PLANNING: "Planning",
-  IN_DEVELOPMENT: "In Development",
-  IN_REVIEW: "In Review",
-  READY_STAGING: "Ready for Staging",
-  IN_STAGING: "In Staging",
-  STAGING_VERIFIED: "Staging Verified",
-  READY_PRODUCTION: "Ready for Production",
-  DEPLOYED: "Deployed",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  PLANNING: "bg-slate-500",
-  IN_DEVELOPMENT: "bg-blue-500",
-  IN_REVIEW: "bg-purple-500",
-  READY_STAGING: "bg-yellow-500",
-  IN_STAGING: "bg-orange-500",
-  STAGING_VERIFIED: "bg-cyan-500",
-  READY_PRODUCTION: "bg-green-500",
-  DEPLOYED: "bg-emerald-600",
-};
+import { STATUS_LABELS, STATUS_COLORS } from "@/lib/constants/release";
 
 function getInitials(firstName: string | null, lastName: string | null, email: string) {
   if (firstName || lastName) {

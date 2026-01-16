@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { format, formatDistanceToNow } from "date-fns";
 import { useRelease, useUpdateRelease, useDeleteRelease } from "@/hooks/use-releases";
+import { ReleaseStatus } from "@/lib/validations/release";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -61,39 +62,7 @@ import { useState } from "react";
 import { ActivityTimeline } from "@/components/releases/activity-timeline";
 import { CommentsSection } from "@/components/releases/comments-section";
 import { TooltipProvider } from "@/components/ui/tooltip";
-
-const STATUS_OPTIONS = [
-  { value: "PLANNING", label: "Planning" },
-  { value: "IN_DEVELOPMENT", label: "In Development" },
-  { value: "IN_REVIEW", label: "In Review" },
-  { value: "READY_STAGING", label: "Ready for Staging" },
-  { value: "IN_STAGING", label: "In Staging" },
-  { value: "STAGING_VERIFIED", label: "Staging Verified" },
-  { value: "READY_PRODUCTION", label: "Ready for Production" },
-  { value: "DEPLOYED", label: "Deployed" },
-  { value: "CANCELLED", label: "Cancelled" },
-  { value: "ROLLED_BACK", label: "Rolled Back" },
-];
-
-const STATUS_COLORS: Record<string, string> = {
-  PLANNING: "bg-slate-500",
-  IN_DEVELOPMENT: "bg-blue-500",
-  IN_REVIEW: "bg-purple-500",
-  READY_STAGING: "bg-yellow-500",
-  IN_STAGING: "bg-orange-500",
-  STAGING_VERIFIED: "bg-cyan-500",
-  READY_PRODUCTION: "bg-green-500",
-  DEPLOYED: "bg-emerald-600",
-  CANCELLED: "bg-gray-500",
-  ROLLED_BACK: "bg-red-500",
-};
-
-const PRIORITY_COLORS: Record<string, string> = {
-  LOW: "bg-slate-500",
-  MEDIUM: "bg-blue-500",
-  HIGH: "bg-orange-500",
-  CRITICAL: "bg-red-500",
-};
+import { STATUS_OPTIONS, STATUS_COLORS, PRIORITY_COLORS } from "@/lib/constants/release";
 
 function getInitials(firstName: string | null, lastName: string | null, email: string) {
   if (firstName || lastName) {
@@ -124,7 +93,7 @@ export default function ReleaseDetailPage() {
     try {
       await updateRelease.mutateAsync({
         id: releaseId,
-        data: { status: newStatus as any },
+        data: { status: newStatus as ReleaseStatus },
       });
       toast.success(`Status updated to ${STATUS_OPTIONS.find(s => s.value === newStatus)?.label}`);
     } catch (error) {

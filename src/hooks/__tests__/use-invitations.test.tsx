@@ -98,8 +98,8 @@ describe("useInvitationByToken hook", () => {
     });
 
     expect(result.current.data).toBeDefined();
-    expect(result.current.data?.token).toBe("test-token-123");
     expect(result.current.data?.team).toBeDefined();
+    expect(result.current.data?.email).toBeDefined(); // Masked email
   });
 
   it("should not fetch with empty token", () => {

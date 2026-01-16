@@ -1,4 +1,5 @@
 import { Release, ReleaseStatus, Service } from "@prisma/client";
+import { STATUS_LABELS, STATUS_EMOJI } from "@/lib/constants/release";
 
 interface SlackBlock {
   type: string;
@@ -37,32 +38,6 @@ interface SlackMessage {
   blocks?: SlackBlock[];
   channel?: string;
 }
-
-const STATUS_EMOJI: Record<ReleaseStatus, string> = {
-  PLANNING: "📋",
-  IN_DEVELOPMENT: "🔨",
-  IN_REVIEW: "👀",
-  READY_STAGING: "🎯",
-  IN_STAGING: "🧪",
-  STAGING_VERIFIED: "✅",
-  READY_PRODUCTION: "🚀",
-  DEPLOYED: "🎉",
-  CANCELLED: "❌",
-  ROLLED_BACK: "⏪",
-};
-
-const STATUS_LABELS: Record<ReleaseStatus, string> = {
-  PLANNING: "Planning",
-  IN_DEVELOPMENT: "In Development",
-  IN_REVIEW: "In Review",
-  READY_STAGING: "Ready for Staging",
-  IN_STAGING: "In Staging",
-  STAGING_VERIFIED: "Staging Verified",
-  READY_PRODUCTION: "Ready for Production",
-  DEPLOYED: "Deployed",
-  CANCELLED: "Cancelled",
-  ROLLED_BACK: "Rolled Back",
-};
 
 interface ReleaseWithService extends Release {
   service: Service;

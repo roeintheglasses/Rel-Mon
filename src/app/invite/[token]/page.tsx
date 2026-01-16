@@ -151,51 +151,8 @@ export default function InvitePage() {
     );
   }
 
-  // Show email mismatch error
-  if (
-    user?.primaryEmailAddress?.emailAddress?.toLowerCase() !==
-    invitation.email.toLowerCase()
-  ) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
-              <AlertCircle className="h-6 w-6 text-yellow-500" />
-            </div>
-            <CardTitle>Email Mismatch</CardTitle>
-            <CardDescription>
-              This invitation was sent to a different email address
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg bg-muted p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Invitation for:</span>
-                <span className="font-medium">{invitation.email}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Your email:</span>
-                <span className="font-medium">
-                  {user?.primaryEmailAddress?.emailAddress}
-                </span>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground text-center">
-              Please sign in with the email address that received the
-              invitation, or ask for a new invitation to be sent to your current
-              email.
-            </p>
-          </CardContent>
-          <CardFooter className="justify-center">
-            <Button variant="outline" onClick={() => router.push("/")}>
-              Go to Dashboard
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
+  // Note: Email validation is handled server-side in the accept endpoint
+  // The public API returns a masked email for privacy, so we can't compare here
 
   // Show accept invitation UI
   return (

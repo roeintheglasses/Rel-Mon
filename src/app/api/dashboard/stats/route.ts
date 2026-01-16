@@ -23,7 +23,7 @@ export async function GET() {
       where: { clerkUserId: userId || "" },
     });
 
-    // Get counts for all releases
+    // Parallelize all queries for better performance
     const [
       totalReleases,
       releasesInProgress,
@@ -32,6 +32,9 @@ export async function GET() {
       deployedThisMonth,
       myReleases,
       activeSprintId,
+      recentActivities,
+      releasesByStatus,
+      upcomingDeployments,
     ] = await Promise.all([
       // Total releases
       prisma.release.count({
@@ -90,78 +93,75 @@ export async function GET() {
         },
         select: { id: true, name: true },
       }),
-    ]);
-
-    // Get recent activities
-    const recentActivities = await prisma.activity.findMany({
-      where: {
-        release: {
-          teamId: team.id,
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatarUrl: true,
+      // Get recent activities
+      prisma.activity.findMany({
+        where: {
+          release: {
+            teamId: team.id,
           },
         },
-        release: {
-          select: {
-            id: true,
-            title: true,
-            service: {
-              select: {
-                name: true,
-                color: true,
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              avatarUrl: true,
+            },
+          },
+          release: {
+            select: {
+              id: true,
+              title: true,
+              service: {
+                select: {
+                  name: true,
+                  color: true,
+                },
               },
             },
           },
         },
-      },
-    });
-
-    // Get releases by status for chart
-    const releasesByStatus = await prisma.release.groupBy({
-      by: ["status"],
-      where: {
-        teamId: team.id,
-        status: { notIn: ["DEPLOYED", "CANCELLED", "ROLLED_BACK"] },
-      },
-      _count: true,
-    });
-
-    // Get releases ready for deployment with details
-    const upcomingDeployments = await prisma.release.findMany({
-      where: {
-        teamId: team.id,
-        status: { in: ["READY_STAGING", "STAGING_VERIFIED", "READY_PRODUCTION"] },
-        isBlocked: false,
-      },
-      orderBy: { statusChangedAt: "asc" },
-      take: 5,
-      include: {
-        service: {
-          select: {
-            name: true,
-            color: true,
+      }),
+      // Get releases by status for chart
+      prisma.release.groupBy({
+        by: ["status"],
+        where: {
+          teamId: team.id,
+          status: { notIn: ["DEPLOYED", "CANCELLED", "ROLLED_BACK"] },
+        },
+        _count: true,
+      }),
+      // Get releases ready for deployment with details
+      prisma.release.findMany({
+        where: {
+          teamId: team.id,
+          status: { in: ["READY_STAGING", "STAGING_VERIFIED", "READY_PRODUCTION"] },
+          isBlocked: false,
+        },
+        orderBy: { statusChangedAt: "asc" },
+        take: 5,
+        include: {
+          service: {
+            select: {
+              name: true,
+              color: true,
+            },
+          },
+          owner: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+              avatarUrl: true,
+            },
           },
         },
-        owner: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
+      }),
+    ]);
 
     return NextResponse.json({
       stats: {

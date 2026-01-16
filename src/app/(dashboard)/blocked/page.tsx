@@ -31,32 +31,7 @@ import {
   Clock,
   Ban,
 } from "lucide-react";
-
-const STATUS_LABELS: Record<string, string> = {
-  PLANNING: "Planning",
-  IN_DEVELOPMENT: "In Development",
-  IN_REVIEW: "In Review",
-  READY_STAGING: "Ready for Staging",
-  IN_STAGING: "In Staging",
-  STAGING_VERIFIED: "Staging Verified",
-  READY_PRODUCTION: "Ready for Production",
-  DEPLOYED: "Deployed",
-  CANCELLED: "Cancelled",
-  ROLLED_BACK: "Rolled Back",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  PLANNING: "bg-slate-500",
-  IN_DEVELOPMENT: "bg-blue-500",
-  IN_REVIEW: "bg-purple-500",
-  READY_STAGING: "bg-yellow-500",
-  IN_STAGING: "bg-orange-500",
-  STAGING_VERIFIED: "bg-teal-500",
-  READY_PRODUCTION: "bg-green-500",
-  DEPLOYED: "bg-emerald-600",
-  CANCELLED: "bg-gray-500",
-  ROLLED_BACK: "bg-red-500",
-};
+import { STATUS_LABELS, STATUS_COLORS } from "@/lib/constants/release";
 
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: "bg-gray-100 text-gray-700",

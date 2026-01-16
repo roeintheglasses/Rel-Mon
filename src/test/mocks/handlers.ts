@@ -209,10 +209,13 @@ export const handlers = [
     return HttpResponse.json({ success: true });
   }),
 
-  http.get("/api/invitations/:token", ({ params }) => {
+  http.get("/api/invitations/:token", () => {
+    // Public endpoint returns masked email and no token for privacy
     return HttpResponse.json({
-      ...mockInvitation,
-      token: params.token,
+      id: mockInvitation.id,
+      email: "i*****@example.com", // Masked email
+      role: mockInvitation.role,
+      expiresAt: mockInvitation.expiresAt,
       team: {
         id: "team-1",
         name: "Test Team",
