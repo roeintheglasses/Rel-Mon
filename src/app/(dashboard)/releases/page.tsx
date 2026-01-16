@@ -54,9 +54,11 @@ import {
   Trash2,
   Calendar as CalendarIcon,
   ExternalLink,
+  Rocket,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   useReleases,
   useCreateRelease,
@@ -552,14 +554,22 @@ export default function ReleasesPage() {
             </TableBody>
           </Table>
         </div>
+      ) : !services || services.length === 0 ? (
+        <EmptyState
+          icon={Rocket}
+          title="No releases yet"
+          description="Create a service first before adding releases. Services help you organize and track your deployments."
+        />
       ) : (
-        <div className="rounded-lg border bg-card p-8 text-center">
-          <p className="text-muted-foreground">
-            {!services || services.length === 0
-              ? "No services yet. Create a service first before adding releases."
-              : "No releases yet. Create your first release to start tracking deployments."}
-          </p>
-        </div>
+        <EmptyState
+          icon={Rocket}
+          title="No releases yet"
+          description="Create your first release to start tracking deployments. Releases help you manage and coordinate your software delivery."
+          action={{
+            label: "New Release",
+            onClick: handleOpenCreate,
+          }}
+        />
       )}
     </div>
   );
