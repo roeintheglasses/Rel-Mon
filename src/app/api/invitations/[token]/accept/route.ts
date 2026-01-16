@@ -74,37 +74,23 @@ export async function POST(
       );
     }
 
-    // Check if already a member
-    const existingMembership = await prisma.teamMember.findUnique({
-      where: {
-        teamId_userId: {
-          teamId: invitation.teamId,
-          userId: currentUser.id,
+    // Use upsert to handle race conditions - if membership already exists,
+    // this is idempotent and won't fail on concurrent requests
+    const [membership] = await prisma.$transaction([
+      prisma.teamMember.upsert({
+        where: {
+          teamId_userId: {
+            teamId: invitation.teamId,
+            userId: currentUser.id,
+          },
         },
-      },
-    });
-
-    if (existingMembership) {
-      // Mark invitation as accepted and return team info
-      await prisma.teamInvitation.update({
-        where: { id: invitation.id },
-        data: { acceptedAt: new Date() },
-      });
-
-      return NextResponse.json({
-        success: true,
-        alreadyMember: true,
-        team: invitation.team,
-      });
-    }
-
-    // Create team membership and mark invitation as accepted in a transaction
-    await prisma.$transaction([
-      prisma.teamMember.create({
-        data: {
+        create: {
           teamId: invitation.teamId,
           userId: currentUser.id,
           role: invitation.role,
+        },
+        update: {
+          // Keep existing membership unchanged if already a member
         },
       }),
       prisma.teamInvitation.update({
@@ -113,10 +99,14 @@ export async function POST(
       }),
     ]);
 
+    // Check if this was an existing membership (role might differ from invitation)
+    const wasAlreadyMember = membership.joinedAt < new Date(Date.now() - 1000);
+
     return NextResponse.json({
       success: true,
+      alreadyMember: wasAlreadyMember,
       team: invitation.team,
-      role: invitation.role,
+      role: membership.role,
     });
   } catch (error) {
     console.error("Error accepting invitation:", error);

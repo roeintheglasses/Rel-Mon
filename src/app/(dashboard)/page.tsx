@@ -51,8 +51,8 @@ interface StatCardProps {
 }
 
 function StatCard({ title, value, description, icon, href, variant = "default" }: StatCardProps) {
-  const content = (
-    <Card className={`relative overflow-hidden ${variant === "warning" ? "border-yellow-500/50" : variant === "success" ? "border-green-500/50" : ""}`}>
+  const cardContent = (
+    <>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <div className={`${variant === "warning" ? "text-yellow-500" : variant === "success" ? "text-green-500" : "text-muted-foreground"}`}>
@@ -64,24 +64,26 @@ function StatCard({ title, value, description, icon, href, variant = "default" }
         <p className="text-xs text-muted-foreground">{description}</p>
       </CardContent>
       {href && (
-        <div className="absolute inset-0 group">
-          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-          </div>
+        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
         </div>
       )}
-    </Card>
+    </>
   );
+
+  const cardClassName = `relative overflow-hidden ${variant === "warning" ? "border-yellow-500/50" : variant === "success" ? "border-green-500/50" : ""}`;
 
   if (href) {
     return (
-      <Link href={href} className="block hover:opacity-80 transition-opacity">
-        {content}
+      <Link href={href} className="block group hover:opacity-80 transition-opacity">
+        <Card className={cardClassName}>
+          {cardContent}
+        </Card>
       </Link>
     );
   }
 
-  return content;
+  return <Card className={cardClassName}>{cardContent}</Card>;
 }
 
 export default function DashboardPage() {

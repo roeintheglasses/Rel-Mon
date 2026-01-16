@@ -182,7 +182,11 @@ export default function NotificationsSettingsPage() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => setShowWebhookForm(true)}
+                  onClick={() => {
+                    // Pre-populate channel with existing value when updating
+                    setChannel(settings?.slackChannel || "");
+                    setShowWebhookForm(true);
+                  }}
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Update Webhook

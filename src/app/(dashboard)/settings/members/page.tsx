@@ -102,15 +102,23 @@ export default function TeamMembersPage() {
         role: inviteRole,
       });
 
-      // Copy invite URL to clipboard
+      // Copy invite URL to clipboard (handle clipboard errors separately)
       if (result.inviteUrl) {
-        await navigator.clipboard.writeText(result.inviteUrl);
-        toast.success(
-          "Invitation created! Invite link copied to clipboard.",
-          {
-            description: `Send the link to ${inviteEmail} to complete the invitation.`,
-          }
-        );
+        try {
+          await navigator.clipboard.writeText(result.inviteUrl);
+          toast.success(
+            "Invitation created! Invite link copied to clipboard.",
+            {
+              description: `Send the link to ${inviteEmail} to complete the invitation.`,
+            }
+          );
+        } catch {
+          // Clipboard failed but invitation was created successfully
+          toast.success("Invitation created!", {
+            description: `Send the invite link to ${inviteEmail} to complete the invitation.`,
+          });
+          toast.warning("Couldn't copy to clipboard. Please copy the link manually.");
+        }
       } else {
         toast.success("Invitation created!");
       }
@@ -139,10 +147,14 @@ export default function TeamMembersPage() {
   const handleCopyLink = async (token: string) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
     const inviteUrl = `${appUrl}/invite/${token}`;
-    await navigator.clipboard.writeText(inviteUrl);
-    setCopiedToken(token);
-    setTimeout(() => setCopiedToken(null), 2000);
-    toast.success("Invite link copied to clipboard");
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopiedToken(token);
+      setTimeout(() => setCopiedToken(null), 2000);
+      toast.success("Invite link copied to clipboard");
+    } catch {
+      toast.error("Failed to copy to clipboard");
+    }
   };
 
   const clerkMembers = memberships?.data || [];

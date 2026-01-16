@@ -67,7 +67,7 @@ model TeamInvitation {
   teamId     String
   email      String
   role       TeamRole  @default(MEMBER)
-  token      String    @unique @default(cuid())
+  token      String    @unique
   expiresAt  DateTime
   acceptedAt DateTime?
   createdAt  DateTime  @default(now())

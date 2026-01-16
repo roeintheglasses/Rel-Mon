@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 const createInvitationSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -154,12 +155,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create invitation (expires in 7 days)
+    // Create invitation with cryptographically secure token (expires in 7 days)
+    const token = randomUUID();
     const invitation = await prisma.teamInvitation.create({
       data: {
         teamId: team.id,
         email,
         role,
+        token,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
       select: {

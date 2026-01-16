@@ -3,8 +3,24 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
+// Validate Slack webhook URL to prevent SSRF attacks
+const slackWebhookSchema = z
+  .string()
+  .url()
+  .refine(
+    (value) => {
+      try {
+        const url = new URL(value);
+        return url.protocol === "https:" && url.hostname === "hooks.slack.com";
+      } catch {
+        return false;
+      }
+    },
+    { message: "Slack webhook must be a https://hooks.slack.com URL" }
+  );
+
 const updateSettingsSchema = z.object({
-  slackWebhookUrl: z.string().url().nullable().optional(),
+  slackWebhookUrl: slackWebhookSchema.nullable().optional(),
   slackChannel: z.string().max(100).nullable().optional(),
   notifyOnStatusChange: z.boolean().optional(),
   notifyOnBlocked: z.boolean().optional(),
@@ -60,9 +76,9 @@ export async function GET() {
 // PATCH - Update team settings
 export async function PATCH(request: NextRequest) {
   try {
-    const { orgId } = await auth();
+    const { orgId, userId } = await auth();
 
-    if (!orgId) {
+    if (!orgId || !userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -72,6 +88,31 @@ export async function PATCH(request: NextRequest) {
 
     if (!team) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 });
+    }
+
+    // Verify user has admin/owner permissions to update settings
+    const currentUser = await prisma.user.findUnique({
+      where: { clerkUserId: userId },
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const membership = await prisma.teamMember.findUnique({
+      where: {
+        teamId_userId: {
+          teamId: team.id,
+          userId: currentUser.id,
+        },
+      },
+    });
+
+    if (!membership || !["OWNER", "ADMIN"].includes(membership.role)) {
+      return NextResponse.json(
+        { error: "You don't have permission to update team settings" },
+        { status: 403 }
+      );
     }
 
     let body;
