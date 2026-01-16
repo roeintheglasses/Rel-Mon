@@ -17,6 +17,8 @@ interface NotifyParams {
 
 /**
  * Get team notification settings
+ * @param teamId - The ID of the team
+ * @returns Team notification settings including Slack configuration
  */
 async function getTeamNotificationSettings(teamId: string) {
   return prisma.team.findUnique({
@@ -33,6 +35,8 @@ async function getTeamNotificationSettings(teamId: string) {
 
 /**
  * Get release with service and owner for notifications
+ * @param releaseId - The ID of the release
+ * @returns Release with associated service and owner details
  */
 async function getReleaseForNotification(releaseId: string) {
   return prisma.release.findUnique({
@@ -51,7 +55,13 @@ async function getReleaseForNotification(releaseId: string) {
 }
 
 /**
- * Send status change notification
+ * Send status change notification to Slack
+ * @param params - Notification parameters including teamId, releaseId, fromStatus, and toStatus
+ * @param params.teamId - The ID of the team to notify
+ * @param params.releaseId - The ID of the release that changed
+ * @param params.fromStatus - The previous status
+ * @param params.toStatus - The new status
+ * @returns Promise that resolves when notification is sent
  */
 export async function notifyStatusChange(
   params: NotifyParams & {
@@ -88,7 +98,12 @@ export async function notifyStatusChange(
 }
 
 /**
- * Send ready to deploy notification
+ * Send ready to deploy notification to Slack
+ * @param params - Notification parameters including teamId, releaseId, and environment
+ * @param params.teamId - The ID of the team to notify
+ * @param params.releaseId - The ID of the release that is ready
+ * @param params.environment - The target environment (staging or production)
+ * @returns Promise that resolves when notification is sent
  */
 export async function notifyReadyToDeploy(
   params: NotifyParams & {
@@ -122,7 +137,12 @@ export async function notifyReadyToDeploy(
 }
 
 /**
- * Send blocked release notification
+ * Send blocked release notification to Slack
+ * @param params - Notification parameters including teamId, releaseId, and reason
+ * @param params.teamId - The ID of the team to notify
+ * @param params.releaseId - The ID of the release that is blocked
+ * @param params.reason - The reason for blocking the release
+ * @returns Promise that resolves when notification is sent
  */
 export async function notifyBlocked(
   params: NotifyParams & {
@@ -152,7 +172,11 @@ export async function notifyBlocked(
 }
 
 /**
- * Send unblocked release notification
+ * Send unblocked release notification to Slack
+ * @param params - Notification parameters including teamId and releaseId
+ * @param params.teamId - The ID of the team to notify
+ * @param params.releaseId - The ID of the release that is unblocked
+ * @returns Promise that resolves when notification is sent
  */
 export async function notifyUnblocked(params: NotifyParams): Promise<void> {
   try {
@@ -178,7 +202,12 @@ export async function notifyUnblocked(params: NotifyParams): Promise<void> {
 }
 
 /**
- * Check status and send appropriate notifications
+ * Check status and send appropriate notifications based on status change
+ * @param teamId - The ID of the team to notify
+ * @param releaseId - The ID of the release that changed
+ * @param fromStatus - The previous status
+ * @param toStatus - The new status
+ * @returns Promise that resolves when all applicable notifications are sent
  */
 export async function handleStatusChangeNotifications(
   teamId: string,
@@ -212,6 +241,12 @@ export async function handleStatusChangeNotifications(
 
 /**
  * Handle blocked status change notifications
+ * @param teamId - The ID of the team to notify
+ * @param releaseId - The ID of the release
+ * @param wasBlocked - Whether the release was previously blocked
+ * @param isBlocked - Whether the release is currently blocked
+ * @param blockedReason - The reason for blocking (if blocked)
+ * @returns Promise that resolves when notification is sent
  */
 export async function handleBlockedChangeNotifications(
   teamId: string,

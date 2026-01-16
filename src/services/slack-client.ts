@@ -50,6 +50,9 @@ interface ReleaseWithService extends Release {
 
 /**
  * Sends a message to a Slack webhook
+ * @param webhookUrl - The Slack webhook URL to send the message to
+ * @param message - The message object containing text, blocks, and optional channel
+ * @returns Promise resolving to an object with success status and optional error message
  */
 export async function sendSlackMessage(
   webhookUrl: string,
@@ -82,6 +85,11 @@ export async function sendSlackMessage(
 
 /**
  * Builds a Slack message for status change notifications
+ * @param release - The release object with service and owner information
+ * @param fromStatus - The previous status of the release
+ * @param toStatus - The new status of the release
+ * @param appUrl - The base URL of the application for generating links
+ * @returns A formatted Slack message object with blocks and text
  */
 export function buildStatusChangeMessage(
   release: ReleaseWithService,
@@ -153,6 +161,10 @@ export function buildStatusChangeMessage(
 
 /**
  * Builds a Slack message for ready to deploy notifications
+ * @param release - The release object with service and owner information
+ * @param environment - The target deployment environment (staging or production)
+ * @param appUrl - The base URL of the application for generating links
+ * @returns A formatted Slack message object with blocks and text
  */
 export function buildReadyToDeployMessage(
   release: ReleaseWithService,
@@ -229,6 +241,10 @@ export function buildReadyToDeployMessage(
 
 /**
  * Builds a Slack message for blocked release notifications
+ * @param release - The release object with service and owner information
+ * @param reason - The reason why the release is blocked
+ * @param appUrl - The base URL of the application for generating links
+ * @returns A formatted Slack message object with blocks and text
  */
 export function buildBlockedMessage(
   release: ReleaseWithService,
@@ -310,6 +326,9 @@ export function buildBlockedMessage(
 
 /**
  * Builds a Slack message for unblocked release notifications
+ * @param release - The release object with service and owner information
+ * @param appUrl - The base URL of the application for generating links
+ * @returns A formatted Slack message object with blocks and text
  */
 export function buildUnblockedMessage(
   release: ReleaseWithService,

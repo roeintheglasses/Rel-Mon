@@ -1,6 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "./prisma";
 
+/**
+ * Gets the current authenticated user from Clerk
+ * @returns The user object if authenticated, null otherwise
+ */
 export async function getCurrentUser() {
   const { userId } = await auth();
 
@@ -15,6 +19,10 @@ export async function getCurrentUser() {
   return user;
 }
 
+/**
+ * Gets the current team (organization) from Clerk
+ * @returns The team object if user is in an organization, null otherwise
+ */
 export async function getCurrentTeam() {
   const { orgId } = await auth();
 
@@ -29,6 +37,11 @@ export async function getCurrentTeam() {
   return team;
 }
 
+/**
+ * Requires a team context, throwing an error if not found
+ * @returns The team object
+ * @throws Error if team is not found
+ */
 export async function requireTeam() {
   const team = await getCurrentTeam();
 
@@ -39,6 +52,11 @@ export async function requireTeam() {
   return team;
 }
 
+/**
+ * Requires user authentication, throwing an error if not authenticated
+ * @returns The user object
+ * @throws Error if user is not authenticated
+ */
 export async function requireUser() {
   const user = await getCurrentUser();
 
