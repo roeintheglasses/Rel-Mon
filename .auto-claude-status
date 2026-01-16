@@ -3,23 +3,23 @@
   "spec": "005-public-rest-api",
   "state": "building",
   "subtasks": {
-    "completed": 14,
+    "completed": 17,
     "total": 20,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Public Sprints API (Read-Only)",
+    "current": "OpenAPI Documentation",
     "id": null,
-    "total": 1
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 16,
+    "number": 19,
     "started_at": "2026-01-16T22:41:56.937751"
   },
-  "last_update": "2026-01-16T23:18:20.337922"
+  "last_update": "2026-01-16T23:26:10.118130"
 }
