@@ -123,9 +123,9 @@ export const POST = withApiAuth(async (request: NextRequest, { team }) => {
       const owner = await prisma.user.findFirst({
         where: {
           id: body.ownerId,
-          teams: {
+          memberships: {
             some: {
-              id: team.id,
+              teamId: team.id,
             },
           },
         },
