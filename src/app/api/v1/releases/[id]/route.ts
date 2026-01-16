@@ -177,7 +177,7 @@ export const PATCH = withApiAuth(async (request: NextRequest, { team, params, ap
     const validation = updateReleaseSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid request body", details: validation.error.errors },
+        { error: "Invalid request body", details: validation.error.format() },
         { status: 400 }
       );
     }
@@ -317,10 +317,12 @@ export const PATCH = withApiAuth(async (request: NextRequest, { team, params, ap
     if (Object.keys(changes).length > 0) {
       await prisma.activity.create({
         data: {
+          teamId: team.id,
           releaseId: id,
           type: "RELEASE_UPDATED",
+          action: "updated",
           description: `Release updated via API (Key: ${apiKey.name})`,
-          metadata: changes,
+          metadata: changes as any,
         },
       });
     }
