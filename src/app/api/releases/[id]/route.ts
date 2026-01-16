@@ -8,7 +8,10 @@ import {
   handleBlockedChangeNotifications,
 } from "@/services/notification-service";
 
-// Helper to update deployment group status based on child releases
+/**
+ * Update deployment group status based on child releases
+ * @param deploymentGroupId - ID of the deployment group to update
+ */
 async function updateDeploymentGroupStatus(
   deploymentGroupId: string
 ): Promise<void> {
@@ -67,7 +70,13 @@ async function updateDeploymentGroupStatus(
   }
 }
 
-// GET /api/releases/[id] - Get a single release with full details
+/**
+ * GET /api/releases/[id] - Get a single release with full details
+ * @description Fetches a release with all related data including dependencies, activities, and comments
+ * @param request - HTTP request
+ * @param params - Route parameters containing release ID
+ * @returns JSON of release with full details or error response
+ */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -181,7 +190,13 @@ export async function GET(
   }
 }
 
-// PATCH /api/releases/[id] - Update a release
+/**
+ * PATCH /api/releases/[id] - Update a release
+ * @description Updates release fields, handles status changes, sends notifications, and recalculates blocked status
+ * @param request - HTTP request with update data in body
+ * @param params - Route parameters containing release ID
+ * @returns JSON of updated release or error response
+ */
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -367,7 +382,13 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/releases/[id] - Delete a release
+/**
+ * DELETE /api/releases/[id] - Delete a release
+ * @description Permanently deletes a release and its related records (cascades)
+ * @param request - HTTP request
+ * @param params - Route parameters containing release ID
+ * @returns JSON success response or error
+ */
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

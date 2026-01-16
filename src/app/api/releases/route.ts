@@ -3,7 +3,12 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { createReleaseSchema, ReleaseStatus, releaseStatusEnum } from "@/lib/validations/release";
 
-// GET /api/releases - List all releases for the current team
+/**
+ * GET /api/releases - List all releases for the current team
+ * @description Fetches releases with optional filters (sprint, service, status, owner, blocked)
+ * @param request - HTTP request with optional query parameters
+ * @returns JSON array of releases with service, sprint, owner, and count details
+ */
 export async function GET(request: Request) {
   try {
     const { userId, orgId } = await auth();
@@ -114,7 +119,12 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/releases - Create a new release
+/**
+ * POST /api/releases - Create a new release
+ * @description Creates a new release for the team with validation
+ * @param request - HTTP request with release data in body
+ * @returns JSON of created release with service, sprint, and owner details
+ */
 export async function POST(request: Request) {
   try {
     const { orgId } = await auth();

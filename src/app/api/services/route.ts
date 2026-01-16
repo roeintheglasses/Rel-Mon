@@ -3,6 +3,11 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { createServiceSchema } from "@/lib/validations/service";
 
+/**
+ * Convert text to URL-friendly slug
+ * @param text - Text to slugify
+ * @returns Lowercase slug with hyphens
+ */
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -10,7 +15,11 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-// GET /api/services - List all services for the current team
+/**
+ * GET /api/services - List all services for the current team
+ * @description Fetches all services with release count
+ * @returns JSON array of services ordered by name
+ */
 export async function GET() {
   try {
     const { orgId } = await auth();
@@ -47,7 +56,12 @@ export async function GET() {
   }
 }
 
-// POST /api/services - Create a new service
+/**
+ * POST /api/services - Create a new service
+ * @description Creates a new service with unique slug generation
+ * @param request - HTTP request with service data in body
+ * @returns JSON of created service
+ */
 export async function POST(request: Request) {
   try {
     const { orgId } = await auth();
