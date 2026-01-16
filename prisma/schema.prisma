@@ -25,6 +25,7 @@ model Team {
   sprints               Sprint[]
   invitations           TeamInvitation[]
   members               TeamMember[]
+  apiKeys               ApiKey[]
 
   @@index([clerkOrgId])
 }
@@ -76,6 +77,23 @@ model TeamInvitation {
   @@index([teamId])
   @@index([token])
   @@index([email])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  teamId     String
+  name       String
+  key        String    @unique
+  scopes     String[]
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([key])
 }
 
 model OAuthConnection {
