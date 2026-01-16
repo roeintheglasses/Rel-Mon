@@ -1,6 +1,6 @@
 # User Guide
 
-Welcome to Rel-Mon, your comprehensive release management solution. This guide will walk you through all features and workflows to help you effectively manage releases across your services.
+Welcome to Release Coordinator, your comprehensive release management solution. This guide will walk you through all features and workflows to help you effectively manage releases across your services.
 
 ## Table of Contents
 
@@ -20,12 +20,11 @@ Welcome to Rel-Mon, your comprehensive release management solution. This guide w
 
 ### Signing Up
 
-1. Navigate to the Rel-Mon application
+1. Navigate to the Release Coordinator application
 2. Click **Sign In** or **Sign Up**
 3. Create an account using your email address or OAuth provider
 4. Complete your profile with your name and avatar
 
-_[Screenshot: Sign-up page]_
 
 ### Creating Your First Organization
 
@@ -36,11 +35,10 @@ After signing in, you'll need to create or join an organization:
 3. Click **Create**
 4. You'll automatically be assigned as the organization owner
 
-_[Screenshot: Create organization dialog]_
 
 ### Understanding User Roles
 
-Rel-Mon supports four team roles with different permissions:
+Release Coordinator supports four team roles with different permissions:
 
 - **OWNER**: Full access to all features, can manage billing and delete the organization
 - **ADMIN**: Can manage team members, services, and all releases
@@ -61,7 +59,6 @@ Rel-Mon supports four team roles with different permissions:
 4. Select their role (OWNER, ADMIN, MEMBER, or VIEWER)
 5. Click **Send Invitation**
 
-_[Screenshot: Team members page with invite dialog]_
 
 **What happens next:**
 - The invitee receives an email with an invitation link
@@ -85,7 +82,6 @@ _[Screenshot: Team members page with invite dialog]_
 2. Select **Remove from Team**
 3. Confirm the action
 
-_[Screenshot: Team members list with actions]_
 
 ### Managing Pending Invitations
 
@@ -118,7 +114,6 @@ Services represent your applications, microservices, or systems that require rel
    - **Color**: Choose a color to identify this service visually
 4. Click **Create Service**
 
-_[Screenshot: New service dialog]_
 
 ### Service Fields Explained
 
@@ -142,7 +137,6 @@ _[Screenshot: New service dialog]_
 4. Select **Edit**
 5. Update the fields and click **Save Changes**
 
-_[Screenshot: Services list with edit options]_
 
 ### Archiving Services
 
@@ -179,7 +173,6 @@ Releases represent a deployable unit of work, typically containing multiple feat
    - **Description** (optional): Details about what's included
 4. Click **Create Release**
 
-_[Screenshot: New release dialog]_
 
 ### Release Lifecycle
 
@@ -272,7 +265,6 @@ Releases progress through a comprehensive workflow with 10 possible statuses:
 - Performance issues
 - Rollback was necessary
 
-_[Screenshot: Release status dropdown showing all statuses]_
 
 ### Release Status Workflow
 
@@ -336,7 +328,6 @@ Click on any release to see its detailed view, which includes:
 - Notes and updates
 - @mention team members
 
-_[Screenshot: Release detail page]_
 
 ### Adding Items to a Release
 
@@ -360,7 +351,6 @@ _[Screenshot: Release detail page]_
 - Assignee
 - Link to Jira
 
-_[Screenshot: Add Jira ticket dialog with search]_
 
 #### Linking GitHub Pull Requests
 
@@ -382,7 +372,6 @@ _[Screenshot: Add Jira ticket dialog with search]_
 - Author
 - Link to GitHub
 
-_[Screenshot: Add GitHub PR dialog with search]_
 
 ### Release Priority Levels
 
@@ -430,7 +419,6 @@ When a release encounters an impediment:
 1. Toggle the **Blocked** switch off
 2. Team will be notified the release is unblocked
 
-_[Screenshot: Release detail showing blocked status with reason]_
 
 ### Assigning an Owner
 
@@ -462,7 +450,6 @@ Collaborate with your team using comments:
 - Delete your own comments
 - All comments are timestamped
 
-_[Screenshot: Comments section]_
 
 ---
 
@@ -499,7 +486,6 @@ Dependencies help you manage releases that must be deployed in a specific order 
 6. Optionally add a **description** explaining why
 7. Click **Add Dependency**
 
-_[Screenshot: Add dependency dialog]_
 
 ### Example Scenarios
 
@@ -530,7 +516,6 @@ When the blocking release is deployed:
 3. Click **Mark Resolved** next to the dependency
 4. The dependency is marked complete with a timestamp
 
-_[Screenshot: Dependencies tab showing resolved and unresolved dependencies]_
 
 ---
 
@@ -551,7 +536,6 @@ Sprints help you organize releases into time-boxed iterations.
    - **Goal** (optional): Sprint objective or theme
 4. Click **Create Sprint**
 
-_[Screenshot: New sprint dialog]_
 
 ### Sprint Statuses
 
@@ -595,7 +579,6 @@ Sprints progress through four statuses:
 3. Select multiple releases
 4. Click **Assign to Sprint**
 
-_[Screenshot: Sprint detail page showing assigned releases]_
 
 ### Sprint Velocity and Metrics
 
@@ -658,7 +641,6 @@ Use deployment groups when:
    - **Notify when ready**: Toggle to enable notifications
 4. Click **Create Group**
 
-_[Screenshot: Create deployment group dialog]_
 
 ### Understanding Deploy Order
 
@@ -681,7 +663,6 @@ _[Screenshot: Create deployment group dialog]_
 - Deploy multiple microservices together
 - All are ready and can go live simultaneously
 
-_[Screenshot: Sequential vs Simultaneous deployment visualization]_
 
 ### Assigning Releases to a Group
 
@@ -698,7 +679,6 @@ _[Screenshot: Sequential vs Simultaneous deployment visualization]_
 - The order determines deployment sequence
 - Top to bottom is the deployment order
 
-_[Screenshot: Manage releases dialog with drag-and-drop]_
 
 ### Deployment Group Status Flow
 
@@ -747,7 +727,6 @@ Groups progress through five statuses:
 3. Select **Mark Deployed**
 4. System records `deployedAt` timestamp
 
-_[Screenshot: Deployment group detail showing deployment progress]_
 
 ### Notifications
 
@@ -763,11 +742,11 @@ When "Notify when ready" is enabled:
 
 ## Integrations Setup
 
-Rel-Mon integrates with Jira and GitHub to link tickets and pull requests to your releases.
+Release Coordinator integrates with Jira and GitHub to link tickets and pull requests to your releases.
 
 ### Important: Personal Integrations
 
-**Key concept:** Integrations in Rel-Mon are **personal**, not team-wide.
+**Key concept:** Integrations in Release Coordinator are **personal**, not team-wide.
 
 - Each team member connects their own Jira and GitHub accounts
 - Your personal OAuth tokens are used for searches and linking
@@ -794,7 +773,7 @@ Rel-Mon integrates with Jira and GitHub to link tickets and pull requests to you
    - Read Jira project and issue data
    - Read user profile information
 7. Click **Accept**
-8. You'll be redirected back to Rel-Mon
+8. You'll be redirected back to Release Coordinator
 
 **Connection confirmed:**
 - Green badge showing "Connected"
@@ -802,7 +781,6 @@ Rel-Mon integrates with Jira and GitHub to link tickets and pull requests to you
 - Jira site URL shown
 - Last used timestamp
 
-_[Screenshot: Jira integration card showing connected state]_
 
 #### What You Can Do With Jira Integration
 
@@ -846,7 +824,6 @@ To disconnect:
 - Existing linked tickets remain visible to the team
 - You can reconnect at any time
 
-_[Screenshot: Integrations page showing both Jira and GitHub]_
 
 ### GitHub Integration
 
@@ -867,14 +844,13 @@ _[Screenshot: Integrations page showing both Jira and GitHub]_
    - Read access to pull requests
    - Read user profile information
 6. Click **Authorize**
-7. You'll be redirected back to Rel-Mon
+7. You'll be redirected back to Release Coordinator
 
 **Connection confirmed:**
 - Green badge showing "Connected"
 - Your GitHub account email displayed
 - Last used timestamp
 
-_[Screenshot: GitHub integration card showing connected state]_
 
 #### What You Can Do With GitHub Integration
 
@@ -968,7 +944,7 @@ Stay informed about release progress with Slack notifications.
 1. Go to [Slack Incoming Webhooks](https://api.slack.com/messaging/webhooks)
 2. Click **Create your Slack app**
 3. Choose **From scratch**
-4. Enter an app name (e.g., "Rel-Mon Notifications")
+4. Enter an app name (e.g., "Release Coordinator Notifications")
 5. Select your Slack workspace
 6. Click **Create App**
 7. Click **Incoming Webhooks**
@@ -978,11 +954,10 @@ Stay informed about release progress with Slack notifications.
 11. Click **Allow**
 12. **Copy** the webhook URL (starts with `https://hooks.slack.com/services/...`)
 
-_[Screenshot: Slack webhook creation process]_
 
-#### Step 2: Configure in Rel-Mon
+#### Step 2: Configure in Release Coordinator
 
-**In Rel-Mon:**
+**In Release Coordinator:**
 
 1. Navigate to **Settings** → **Notifications**
 2. Find the **Slack Integration** section
@@ -996,13 +971,12 @@ _[Screenshot: Slack webhook creation process]_
 - Green "Connected" badge appears
 - Channel name displayed (if override used)
 
-_[Screenshot: Notifications settings page]_
 
 #### Step 3: Test the Connection
 
 1. Click **Send Test Message**
 2. Check your Slack channel
-3. You should see a test notification from Rel-Mon
+3. You should see a test notification from Release Coordinator
 
 If the test fails:
 - Verify the webhook URL is correct
@@ -1034,7 +1008,6 @@ Choose which events trigger notifications:
 2. Find **Status Changes** preference
 3. Toggle the switch on/off
 
-_[Screenshot: Notification preferences with toggles]_
 
 #### Ready to Deploy
 
@@ -1264,7 +1237,7 @@ Coming soon! We're working on adding keyboard shortcuts to make navigation even 
 
 ### General
 
-**Q: Can I use Rel-Mon for multiple teams?**
+**Q: Can I use Release Coordinator for multiple teams?**
 A: Yes, you can be a member of multiple organizations. Switch between them using the organization selector.
 
 **Q: Is there a mobile app?**

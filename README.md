@@ -34,15 +34,15 @@ Release Coordinator helps teams plan, track, and deploy software releases with c
 ## 🛠 Tech Stack
 
 ### Frontend & Framework
-- **Next.js 16.1.1** - React framework with App Router
-- **React 19.2.3** - UI library
+- **Next.js** - React framework with App Router
+- **React** - UI library
 - **TypeScript** - Type-safe development
-- **Tailwind CSS 4** - Utility-first CSS framework
+- **Tailwind CSS** - Utility-first CSS framework
 - **Radix UI** - Accessible component primitives
 - **Lucide React** - Icon library
 
 ### Backend & Database
-- **Prisma 5.22.0** - Next-generation ORM
+- **Prisma** - Next-generation ORM
 - **PostgreSQL** - Primary database (via Neon)
 - **Next.js API Routes** - RESTful API endpoints
 
@@ -558,7 +558,7 @@ When reporting bugs, please include:
 
 ## 📄 License
 
-[Add your license information here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 

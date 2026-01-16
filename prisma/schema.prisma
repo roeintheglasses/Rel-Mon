@@ -9,9 +9,9 @@ datasource db {
 
 model Team {
   id                    String            @id @default(cuid())
-  clerkOrgId            String            @unique // Clerk organization ID for authentication
+  clerkOrgId            String            @unique // Clerk organization ID
   name                  String
-  slug                  String            @unique // URL-safe unique identifier
+  slug                  String            @unique
   slackWebhookUrl       String?
   slackChannel          String?
   notifyOnStatusChange  Boolean           @default(true)
@@ -19,31 +19,31 @@ model Team {
   notifyOnReadyToDeploy Boolean           @default(true)
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
-  deploymentGroups      DeploymentGroup[] // One-to-many: team owns multiple deployment groups
-  releases              Release[]         // One-to-many: team owns multiple releases
-  services              Service[]         // One-to-many: team owns multiple services
-  sprints               Sprint[]          // One-to-many: team owns multiple sprints
-  invitations           TeamInvitation[]  // One-to-many: pending invitations for this team
-  members               TeamMember[]      // Many-to-many via TeamMember join table
+  deploymentGroups      DeploymentGroup[]
+  releases              Release[]
+  services              Service[]
+  sprints               Sprint[]
+  invitations           TeamInvitation[]
+  members               TeamMember[]
 
   @@index([clerkOrgId])
 }
 
 model User {
   id               String            @id @default(cuid())
-  clerkUserId      String            @unique // Clerk user ID for authentication
+  clerkUserId      String            @unique // Clerk user ID
   email            String            @unique
   firstName        String?
   lastName         String?
   avatarUrl        String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
-  activities       Activity[]        // One-to-many: user's activity history
-  comments         Comment[]         // One-to-many: user's comments on releases
-  ownedGroups      DeploymentGroup[] @relation("GroupOwner") // Named relation: user owns deployment groups
-  oauthConnections OAuthConnection[] // One-to-many: user's OAuth tokens (GitHub, Jira)
-  ownedReleases    Release[]         @relation("ReleaseOwner") // Named relation: user owns releases
-  memberships      TeamMember[]      // Many-to-many via TeamMember join table
+  activities       Activity[]
+  comments         Comment[]
+  ownedGroups      DeploymentGroup[] @relation("GroupOwner")
+  oauthConnections OAuthConnection[] // GitHub, Jira tokens (encrypted)
+  ownedReleases    Release[]         @relation("ReleaseOwner")
+  memberships      TeamMember[]
 
   @@index([clerkUserId])
 }
@@ -54,10 +54,10 @@ model TeamMember {
   userId   String
   role     TeamRole @default(MEMBER)
   joinedAt DateTime @default(now())
-  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade) // Cascade: delete memberships when team is deleted
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade) // Cascade: delete memberships when user is deleted
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([teamId, userId]) // Prevents duplicate memberships: one user can only join a team once
+  @@unique([teamId, userId])
   @@index([teamId])
   @@index([userId])
 }
@@ -67,38 +67,38 @@ model TeamInvitation {
   teamId     String
   email      String
   role       TeamRole  @default(MEMBER)
-  token      String    @unique // Unique token for invitation links
+  token      String    @unique
   expiresAt  DateTime
-  acceptedAt DateTime? // Optional: null until invitation is accepted
+  acceptedAt DateTime?
   createdAt  DateTime  @default(now())
-  team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade) // Cascade: delete invitations when team is deleted
+  team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
-  @@index([token])  // Fast lookup by invitation token
-  @@index([email])  // Fast lookup to check existing invitations for an email
+  @@index([token])
+  @@index([email])
 }
 
 model OAuthConnection {
   id             String        @id @default(cuid())
   userId         String
   provider       OAuthProvider
-  accessToken    String        // Encrypted OAuth token for API calls
-  refreshToken   String?       // Optional: used to refresh expired access tokens
+  accessToken    String        // Encrypted
+  refreshToken   String?       // For token refresh
   tokenExpiresAt DateTime?
-  providerUserId String?       // User's ID in the external provider (e.g., GitHub user ID)
+  providerUserId String?
   providerEmail  String?
-  cloudId        String?       // For Jira Cloud connections
+  cloudId        String?       // Jira Cloud ID
   resourceUrl    String?       // Base URL for API calls
-  scopes         String[]      // OAuth scopes granted by user
+  scopes         String[]
   isValid        Boolean       @default(true)
   lastUsedAt     DateTime?
   lastErrorAt    DateTime?
   lastError      String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade) // Cascade: delete connections when user is deleted
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, provider]) // Business rule: one connection per provider per user
+  @@unique([userId, provider])
   @@index([userId])
   @@index([provider])
 }
@@ -107,20 +107,20 @@ model Service {
   id             String    @id @default(cuid())
   teamId         String
   name           String
-  slug           String    // URL-safe identifier, unique within team
+  slug           String
   description    String?
-  repoOwner      String?   // GitHub repository owner/org
-  repoName       String?   // GitHub repository name
+  repoOwner      String?   // GitHub org/user
+  repoName       String?   // GitHub repo
   repoUrl        String?
-  jiraProjectKey String?   // Jira project key for linking tickets
+  jiraProjectKey String?   // e.g., "PROJ"
   color          String    @default("#6366f1")
   isActive       Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-  releases       Release[] // One-to-many: service has multiple releases
-  team           Team      @relation(fields: [teamId], references: [id], onDelete: Cascade) // Cascade: delete services when team is deleted
+  releases       Release[]
+  team           Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  @@unique([teamId, slug]) // Business rule: slug must be unique within a team
+  @@unique([teamId, slug])
   @@index([teamId])
 }
 
@@ -134,34 +134,34 @@ model Sprint {
   goal             String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
-  deploymentGroups DeploymentGroup[] // One-to-many: sprint contains multiple deployment groups
-  releases         Release[]         // One-to-many: sprint contains multiple releases
-  team             Team              @relation(fields: [teamId], references: [id], onDelete: Cascade) // Cascade: delete sprints when team is deleted
+  deploymentGroups DeploymentGroup[]
+  releases         Release[]
+  team             Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
-  @@index([teamId, status]) // Composite index for efficient queries by team and status
-  @@index([startDate, endDate]) // Range queries for finding active sprints
+  @@index([teamId, status])
+  @@index([startDate, endDate])
 }
 
 model DeploymentGroup {
   id            String                @id @default(cuid())
   teamId        String
-  sprintId      String?               // Optional: deployment groups can exist outside sprints
-  ownerId       String?               // Optional: deployment groups can be unassigned
+  sprintId      String?
+  ownerId       String?
   name          String
   description   String?
   deployOrder   DeployOrder           @default(SEQUENTIAL)
-  orderSequence String[]              // Array of release IDs defining deployment order
+  orderSequence String[]              // Release IDs in deployment order
   targetDate    DateTime?
   deployedAt    DateTime?
   status        DeploymentGroupStatus @default(PENDING)
   notifyOnReady Boolean               @default(true)
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
-  owner         User?                 @relation("GroupOwner", fields: [ownerId], references: [id]) // Named relation: user can own multiple groups
-  sprint        Sprint?               @relation(fields: [sprintId], references: [id]) // Optional: group may not belong to a sprint
-  team          Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade) // Cascade: delete groups when team is deleted
-  releases      Release[]             // One-to-many: group contains multiple releases
+  owner         User?                 @relation("GroupOwner", fields: [ownerId], references: [id])
+  sprint        Sprint?               @relation(fields: [sprintId], references: [id])
+  team          Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  releases      Release[]
 
   @@index([teamId])
   @@index([sprintId])
@@ -170,10 +170,10 @@ model DeploymentGroup {
 model Release {
   id                String              @id @default(cuid())
   teamId            String
-  serviceId         String              // Required: every release belongs to a service
-  sprintId          String?             // Optional: releases can exist outside sprints
-  deploymentGroupId String?             // Optional: releases can be ungrouped
-  ownerId           String?             // Optional: releases can be unassigned
+  serviceId         String
+  sprintId          String?
+  deploymentGroupId String?
+  ownerId           String?
   title             String
   description       String?
   version           String?
@@ -188,22 +188,22 @@ model Release {
   prodDeployedAt    DateTime?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
-  activities        Activity[]          // One-to-many: activity log for this release
-  comments          Comment[]           // One-to-many: comments on this release
-  deploymentGroup   DeploymentGroup?    @relation(fields: [deploymentGroupId], references: [id]) // Optional: release may not be in a group
-  owner             User?               @relation("ReleaseOwner", fields: [ownerId], references: [id]) // Named relation: user can own multiple releases
-  service           Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade) // Cascade: delete releases when service is deleted
-  sprint            Sprint?             @relation(fields: [sprintId], references: [id]) // Optional: release may not be in a sprint
-  team              Team                @relation(fields: [teamId], references: [id], onDelete: Cascade) // Cascade: delete releases when team is deleted
-  dependents        ReleaseDependency[] @relation("BlockingRelease") // Self-referential: releases that depend on this one
-  dependsOn         ReleaseDependency[] @relation("DependentRelease") // Self-referential: releases this one depends on
-  items             ReleaseItem[]       // One-to-many: Jira tickets and GitHub PRs linked to this release
+  activities        Activity[]
+  comments          Comment[]
+  deploymentGroup   DeploymentGroup?    @relation(fields: [deploymentGroupId], references: [id])
+  owner             User?               @relation("ReleaseOwner", fields: [ownerId], references: [id])
+  service           Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  sprint            Sprint?             @relation(fields: [sprintId], references: [id])
+  team              Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  dependents        ReleaseDependency[] @relation("BlockingRelease")
+  dependsOn         ReleaseDependency[] @relation("DependentRelease")
+  items             ReleaseItem[]
 
   @@index([teamId])
   @@index([serviceId])
   @@index([sprintId])
   @@index([deploymentGroupId])
-  @@index([status])      // Fast queries by status (e.g., READY_PRODUCTION)
+  @@index([status])
   @@index([ownerId])
 }
 
@@ -211,56 +211,56 @@ model ReleaseItem {
   id           String          @id @default(cuid())
   releaseId    String
   type         ReleaseItemType // JIRA_TICKET or GITHUB_PR
-  externalId   String          // Ticket key (e.g., "PROJ-123") or PR number
+  externalId   String          // e.g., "PROJ-123" or PR number
   externalUrl  String?
-  title        String?         // Synced from external system
-  status       String?         // Synced from external system
-  assignee     String?         // Synced from external system
+  title        String?
+  status       String?
+  assignee     String?
   lastSyncedAt DateTime?
   syncError    String?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
-  release      Release         @relation(fields: [releaseId], references: [id], onDelete: Cascade) // Cascade: delete items when release is deleted
+  release      Release         @relation(fields: [releaseId], references: [id], onDelete: Cascade)
 
-  @@unique([releaseId, type, externalId]) // Business rule: each external item can only be linked once per release
+  @@unique([releaseId, type, externalId])
   @@index([releaseId])
   @@index([type])
 }
 
 model ReleaseDependency {
   id                 String         @id @default(cuid())
-  dependentReleaseId String         // The release that is waiting/blocked
-  blockingReleaseId  String         // The release that must be completed first
+  dependentReleaseId String         // The blocked release
+  blockingReleaseId  String         // Must complete first
   type               DependencyType @default(BLOCKS)
   description        String?
   isResolved         Boolean        @default(false)
   resolvedAt         DateTime?
   createdAt          DateTime       @default(now())
-  blockingRelease    Release        @relation("BlockingRelease", fields: [blockingReleaseId], references: [id], onDelete: Cascade) // Named relation for self-referential many-to-many
-  dependentRelease   Release        @relation("DependentRelease", fields: [dependentReleaseId], references: [id], onDelete: Cascade) // Named relation for self-referential many-to-many
+  blockingRelease    Release        @relation("BlockingRelease", fields: [blockingReleaseId], references: [id], onDelete: Cascade)
+  dependentRelease   Release        @relation("DependentRelease", fields: [dependentReleaseId], references: [id], onDelete: Cascade)
 
-  @@unique([dependentReleaseId, blockingReleaseId]) // Business rule: prevents duplicate dependency declarations
-  @@index([dependentReleaseId]) // Fast lookup of what this release depends on
-  @@index([blockingReleaseId])  // Fast lookup of what depends on this release
+  @@unique([dependentReleaseId, blockingReleaseId])
+  @@index([dependentReleaseId])
+  @@index([blockingReleaseId])
 }
 
 model Activity {
   id          String       @id @default(cuid())
-  teamId      String?      // Optional: for team-level activities
-  releaseId   String?      // Optional: for release-specific activities
-  userId      String?      // Optional: some activities are system-generated
+  teamId      String?
+  releaseId   String?
+  userId      String?
   type        ActivityType
-  action      String       // Human-readable action description
+  action      String
   description String
-  metadata    Json?        // Flexible JSON for additional context
+  metadata    Json?
   createdAt   DateTime     @default(now())
-  release     Release?     @relation(fields: [releaseId], references: [id], onDelete: Cascade) // Cascade: delete activities when release is deleted
-  user        User?        @relation(fields: [userId], references: [id]) // No cascade: preserve activity history if user is deleted
+  release     Release?     @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id]) // Preserve history if user deleted
 
   @@index([releaseId])
   @@index([userId])
-  @@index([createdAt])   // Fast queries for recent activities
-  @@index([teamId, createdAt]) // Composite index for team activity feed
+  @@index([createdAt])
+  @@index([teamId, createdAt])
 }
 
 model Comment {
@@ -272,12 +272,12 @@ model Comment {
   editedAt  DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  release   Release   @relation(fields: [releaseId], references: [id], onDelete: Cascade) // Cascade: delete comments when release is deleted
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade) // Cascade: delete comments when user is deleted
+  release   Release   @relation(fields: [releaseId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([releaseId])
   @@index([userId])
-  @@index([releaseId, createdAt]) // Composite index for chronological comment threads
+  @@index([releaseId, createdAt])
 }
 
 enum TeamRole {

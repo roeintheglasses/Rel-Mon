@@ -1754,6 +1754,86 @@ Currently, there are no explicit rate limits enforced by the API. However, it's 
 - Implement client-side throttling for bulk operations
 - Use appropriate caching strategies
 - Avoid excessive polling (use webhooks or Slack notifications instead)
+- Limit concurrent requests to 10 per user
+- Add exponential backoff for retries (start with 1 second, max 30 seconds)
+
+---
+
+## Network & Integration Error Handling
+
+### Network Timeouts
+
+API requests may timeout under heavy load or network issues:
+
+**Default Timeouts:**
+- Standard API requests: 30 seconds
+- Integration searches (Jira/GitHub): 15 seconds
+
+**Handling Timeouts:**
+```javascript
+// Recommended client-side timeout handling
+const controller = new AbortController();
+const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+try {
+  const response = await fetch('/api/releases', {
+    signal: controller.signal,
+    // ... other options
+  });
+  clearTimeout(timeoutId);
+} catch (error) {
+  if (error.name === 'AbortError') {
+    // Handle timeout - retry with exponential backoff
+  }
+}
+```
+
+### Token Refresh Failures
+
+OAuth tokens (Jira, GitHub) may expire or become invalid:
+
+**Automatic Refresh:**
+- Jira tokens are automatically refreshed when expired
+- GitHub tokens do not expire but may be revoked
+
+**Error Response (Token Invalid):**
+```json
+{
+  "error": "Integration connection is invalid. Please reconnect.",
+  "code": "OAUTH_INVALID"
+}
+```
+
+**Error Response (Refresh Failed):**
+```json
+{
+  "error": "Failed to refresh token. Please reconnect your integration.",
+  "code": "OAUTH_REFRESH_FAILED"
+}
+```
+
+**Recommended Handling:**
+1. Catch `OAUTH_INVALID` or `OAUTH_REFRESH_FAILED` errors
+2. Prompt user to reconnect integration at `/settings/integrations`
+3. Retry the operation after reconnection
+
+### External Service Errors
+
+When Jira or GitHub APIs fail:
+
+**Error Response:**
+```json
+{
+  "error": "Failed to search Jira issues",
+  "details": "External service temporarily unavailable"
+}
+```
+
+**Best Practices:**
+- Implement retry logic with exponential backoff
+- Show user-friendly messages for external failures
+- Cache successful responses when appropriate
+- Monitor for repeated failures and alert users
 
 ---
 
