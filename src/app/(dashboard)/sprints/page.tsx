@@ -57,6 +57,7 @@ import {
   useDeleteSprint,
   Sprint,
 } from "@/hooks/use-sprints";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -487,11 +488,15 @@ export default function SprintsPage() {
           </Table>
         </div>
       ) : (
-        <div className="rounded-lg border bg-card p-8 text-center">
-          <p className="text-muted-foreground">
-            No sprints yet. Create your first sprint to start organizing releases.
-          </p>
-        </div>
+        <EmptyState
+          icon={CalendarIcon}
+          title="No sprints yet"
+          description="Create sprint cycles to organize your releases into time-boxed iterations and track progress."
+          action={{
+            label: "Add Sprint",
+            onClick: handleOpenCreate,
+          }}
+        />
       )}
     </div>
   );
