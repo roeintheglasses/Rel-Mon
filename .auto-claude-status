@@ -3,13 +3,13 @@
   "spec": "005-public-rest-api",
   "state": "building",
   "subtasks": {
-    "completed": 13,
+    "completed": 14,
     "total": 20,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Public Dependencies API",
+    "current": "Public Sprints API (Read-Only)",
     "id": null,
     "total": 1
   },
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 15,
+    "number": 16,
     "started_at": "2026-01-16T22:41:56.937751"
   },
-  "last_update": "2026-01-16T23:12:45.000142"
+  "last_update": "2026-01-16T23:18:20.337922"
 }
