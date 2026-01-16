@@ -30,7 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MoreHorizontal, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { Plus, MoreHorizontal, Pencil, Trash2, ExternalLink, Server } from "lucide-react";
 import { toast } from "sonner";
 import {
   useServices,
@@ -39,6 +39,7 @@ import {
   useDeleteService,
   Service,
 } from "@/hooks/use-services";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -423,11 +424,15 @@ export default function ServicesPage() {
           </Table>
         </div>
       ) : (
-        <div className="rounded-lg border bg-card p-8 text-center">
-          <p className="text-muted-foreground">
-            No services yet. Add your first service to start tracking releases.
-          </p>
-        </div>
+        <EmptyState
+          icon={Server}
+          title="No services yet"
+          description="Services represent your microservices or applications. Add your first service to start tracking releases and deployments."
+          action={{
+            label: "Add Service",
+            onClick: handleOpenCreate,
+          }}
+        />
       )}
     </div>
   );
