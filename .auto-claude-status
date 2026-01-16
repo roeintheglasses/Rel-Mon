@@ -3,7 +3,7 @@
   "spec": "005-public-rest-api",
   "state": "building",
   "subtasks": {
-    "completed": 2,
+    "completed": 3,
     "total": 20,
     "in_progress": 1,
     "failed": 0
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 4,
+    "number": 5,
     "started_at": "2026-01-16T22:41:56.937751"
   },
-  "last_update": "2026-01-16T22:49:58.945113"
+  "last_update": "2026-01-16T22:51:13.015386"
 }
