@@ -955,6 +955,123 @@ For production deployments:
 npx prisma migrate deploy
 ```
 
+## 🐛 Troubleshooting
+
+### Common Issues
+
+#### Database Connection Errors
+
+**"Error: DATABASE_URL not found"**
+- Ensure your `.env` file exists in the root directory
+- Verify `DATABASE_URL` is set correctly with proper connection string format
+- Try restarting the development server
+
+**"Can't reach database server"**
+- Check that your database is running (if using local PostgreSQL)
+- Verify database credentials in `DATABASE_URL`
+- For Neon, ensure the connection string includes `?sslmode=require`
+- Check firewall settings if using remote database
+
+**"Prisma Client did not initialize"**
+- Run `npx prisma generate` manually
+- Delete `node_modules/.prisma` and run `npm install` again
+- Ensure Prisma schema is valid: `npx prisma validate`
+
+#### Clerk Authentication Issues
+
+**"Clerk keys are not valid"**
+- Double-check your Clerk keys in the `.env` file
+- Ensure you're using the correct keys for your Clerk application
+- Verify there are no extra spaces or quotes around keys
+- Make sure you copied the entire key value
+
+**"Webhook events not working locally"**
+- Clerk webhooks require a public URL
+- Use [ngrok](https://ngrok.com/) to expose your local server: `ngrok http 3000`
+- Update the webhook URL in Clerk dashboard to your ngrok URL
+- Ensure webhook secret matches your `.env` file
+
+**"Organization not found"**
+- Verify organizations are enabled in your Clerk dashboard
+- Check that you're logged in with the correct account
+- Try switching organizations or creating a new one
+
+#### Build and Runtime Errors
+
+**"Port 3000 is already in use"**
+- Stop any other processes using port 3000
+- Find the process: `lsof -i :3000` (macOS/Linux) or `netstat -ano | findstr :3000` (Windows)
+- Kill the process or specify a different port: `PORT=3001 npm run dev`
+
+**"Module not found" errors**
+- Clear Next.js cache: `rm -rf .next`
+- Reinstall dependencies: `rm -rf node_modules && npm install`
+- Ensure import paths use the `@/` alias correctly
+
+**"Type errors in production build"**
+- Run `npm run build` locally to catch type errors
+- Fix TypeScript errors before committing
+- Check for `any` types that might be hiding issues
+
+**Build fails with "Out of memory"**
+- Increase Node.js memory: `NODE_OPTIONS=--max-old-space-size=4096 npm run build`
+- Close other applications to free up memory
+- Consider building on a machine with more RAM
+
+#### Integration Issues
+
+**Jira integration not working**
+- Verify you've completed the OAuth flow (check Settings → Integrations)
+- Ensure the service has a valid Jira Project Key configured
+- Check that you have access to the Jira project
+- Token may have expired - try disconnecting and reconnecting
+
+**GitHub integration not working**
+- Verify OAuth connection is active
+- Ensure service has correct Repository Owner and Name
+- For private repos, confirm your token has appropriate access
+- Token may have been revoked - reconnect if needed
+
+**Slack notifications not sending**
+- Test the webhook: Settings → Notifications → Send Test Message
+- Verify webhook URL is correct and starts with `https://hooks.slack.com`
+- Check that the Slack channel still exists
+- Webhook may have been revoked in Slack - create a new one if needed
+
+#### Development Server Issues
+
+**Hot reload not working**
+- Save the file again to trigger rebuild
+- Restart the development server
+- Clear `.next` folder: `rm -rf .next && npm run dev`
+- Check that file is inside the `src/` directory
+
+**Changes not appearing**
+- Hard refresh browser: Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (macOS)
+- Clear browser cache
+- Check browser console for errors
+- Ensure file was saved properly
+
+**"Cannot find module" after adding new file**
+- Ensure proper file extension (.ts, .tsx, .js, .jsx)
+- Check import path uses correct alias (`@/`)
+- Restart TypeScript server in VS Code: Cmd+Shift+P → "Restart TS Server"
+
+### Getting Additional Help
+
+If you continue to experience issues:
+
+1. **Check Logs**: Look for error details in terminal and browser console
+2. **Review Documentation**: Check README.md and this DEVELOPMENT guide
+3. **Search Issues**: Look for similar issues in GitHub repository
+4. **Clean Install**: Try removing node_modules and reinstalling
+   ```bash
+   rm -rf node_modules .next
+   npm install
+   npm run dev
+   ```
+5. **Contact Team**: Reach out in team chat or @ maintainers in PRs
+
 ## 🐛 Debugging
 
 ### VS Code Debug Configuration
