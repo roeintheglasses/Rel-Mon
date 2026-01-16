@@ -98,6 +98,19 @@ async function refreshJiraToken(connection: OAuthConnection): Promise<string> {
 
   const tokens = await response.json();
 
+  // Validate token response structure
+  if (!tokens.access_token || typeof tokens.access_token !== "string") {
+    await prisma.oAuthConnection.update({
+      where: { id: connection.id },
+      data: {
+        isValid: false,
+        lastErrorAt: new Date(),
+        lastError: "Invalid token response from Jira",
+      },
+    });
+    throw new Error("Invalid token response from Jira");
+  }
+
   // Encrypt and store new tokens
   const encryptedAccessToken = encryptToken(tokens.access_token);
   const encryptedRefreshToken = tokens.refresh_token
@@ -276,6 +289,27 @@ export async function getJiraIssue(
   );
 
   if (!response.ok) {
+    // Handle 401 consistently with searchJiraIssues - mark connection as invalid
+    if (response.status === 401) {
+      const connection = await prisma.oAuthConnection.findUnique({
+        where: {
+          userId_provider: {
+            userId,
+            provider: "JIRA",
+          },
+        },
+      });
+      if (connection) {
+        await prisma.oAuthConnection.update({
+          where: { id: connection.id },
+          data: {
+            isValid: false,
+            lastErrorAt: new Date(),
+            lastError: "Authentication failed",
+          },
+        });
+      }
+    }
     throw new Error(`Failed to get Jira issue ${issueKey}`);
   }
 
@@ -339,6 +373,6 @@ export async function getJiraIssueUrl(userId: string, cloudId: string, issueKey:
     return `${connection.resourceUrl}/browse/${issueKey}`;
   }
 
-  // Fallback
-  return `https://atlassian.net/browse/${issueKey}`;
+  // No resourceUrl available - cannot construct valid Jira URL without tenant subdomain
+  throw new Error(`Unable to construct Jira URL: no resource URL configured for cloud ID ${cloudId}`);
 }

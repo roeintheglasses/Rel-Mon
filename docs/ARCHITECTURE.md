@@ -220,7 +220,7 @@ Stores encrypted OAuth tokens:
 ### Data Model Characteristics
 
 1. **Multi-tenancy**: All core entities are team-scoped via `teamId`
-2. **Soft Deletes**: Most relations use `CASCADE` for clean deletion
+2. **Cascade Deletes**: Most relations use `CASCADE` for automatic cleanup of related records
 3. **Optimistic Indexes**: Strategic indexes on foreign keys and query patterns
 4. **Audit Trail**: Activity entity tracks all significant changes
 5. **CUID Identifiers**: Collision-resistant unique IDs for all entities

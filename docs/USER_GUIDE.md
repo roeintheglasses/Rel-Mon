@@ -1260,7 +1260,7 @@ A: Currently, you can't move a release. You'll need to create a new release for 
 ### Dependencies
 
 **Q: Can I create circular dependencies?**
-A: The system doesn't prevent it, but it's not recommended. It indicates a design issue.
+A: No, the system validates dependencies and rejects circular references. If you attempt to create a dependency that would cause a circular chain (A → B → A), you'll receive a validation error.
 
 **Q: What happens if I delete a release that others depend on?**
 A: The dependencies are also deleted. Dependent releases are updated to show the dependency is removed.
