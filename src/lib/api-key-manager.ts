@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "crypto";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 
 const API_KEY_PREFIX = "relmon_";
 const API_KEY_LENGTH = 32; // bytes, will be base64 encoded
@@ -34,6 +34,7 @@ export function hashApiKey(plainKey: string): string {
 
 /**
  * Verifies a plaintext API key against a hashed key
+ * Uses timing-safe comparison to prevent timing attacks
  * Returns true if the keys match, false otherwise
  */
 export function verifyApiKey(plainKey: string, hashedKey: string): boolean {
@@ -43,7 +44,17 @@ export function verifyApiKey(plainKey: string, hashedKey: string): boolean {
 
   try {
     const computedHash = hashApiKey(plainKey);
-    return computedHash === hashedKey;
+
+    // Use timing-safe comparison to prevent timing attacks
+    const computedBuffer = Buffer.from(computedHash, "hex");
+    const storedBuffer = Buffer.from(hashedKey, "hex");
+
+    // Buffers must be same length for timingSafeEqual
+    if (computedBuffer.length !== storedBuffer.length) {
+      return false;
+    }
+
+    return timingSafeEqual(computedBuffer, storedBuffer);
   } catch (error) {
     // Invalid key format or hashing error
     return false;

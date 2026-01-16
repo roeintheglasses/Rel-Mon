@@ -18,6 +18,7 @@ export const createReleaseSchema = z.object({
   description: z.string().max(2000).optional(),
   serviceId: z.string().min(1, "Service is required"),
   sprintId: z.string().optional(),
+  ownerId: z.string().optional(),
   version: z.string().max(50).optional(),
   targetDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
 });

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const sprintStatusEnum = z.enum(["PLANNING", "ACTIVE", "COMPLETED", "CANCELLED"]);
+
 export const createSprintSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   startDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
@@ -8,7 +10,7 @@ export const createSprintSchema = z.object({
 });
 
 export const updateSprintSchema = createSprintSchema.partial().extend({
-  status: z.enum(["PLANNING", "ACTIVE", "COMPLETED", "CANCELLED"]).optional(),
+  status: sprintStatusEnum.optional(),
 });
 
 export type CreateSprintInput = z.infer<typeof createSprintSchema>;

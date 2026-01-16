@@ -96,18 +96,19 @@ export function withApiAuth<T = any>(
       const rateLimitResult = checkRateLimit(apiKey.id);
 
       if (!rateLimitResult.allowed) {
+        const resetAtUnix = Math.floor(rateLimitResult.resetAt.getTime() / 1000);
         return NextResponse.json(
           {
             error: "Rate limit exceeded",
             message: "Too many requests. Please try again later.",
-            resetAt: rateLimitResult.resetAt.toISOString(),
+            resetAt: resetAtUnix,
           },
           {
             status: 429,
             headers: {
               "X-RateLimit-Limit": "100",
               "X-RateLimit-Remaining": "0",
-              "X-RateLimit-Reset": rateLimitResult.resetAt.toISOString(),
+              "X-RateLimit-Reset": resetAtUnix.toString(),
               "Retry-After": Math.ceil(
                 (rateLimitResult.resetAt.getTime() - Date.now()) / 1000
               ).toString(),
@@ -131,7 +132,7 @@ export function withApiAuth<T = any>(
       );
       response.headers.set(
         "X-RateLimit-Reset",
-        rateLimitResult.resetAt.toISOString()
+        Math.floor(rateLimitResult.resetAt.getTime() / 1000).toString()
       );
 
       return response;

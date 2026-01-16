@@ -141,8 +141,8 @@ export const PATCH = withApiAuth(
       // Recalculate blocked status
       await recalculateBlockedStatus(releaseId);
 
-      // Log activity if resolved status changed
-      if (data.isResolved !== undefined) {
+      // Log activity if resolved status actually changed
+      if (data.isResolved !== undefined && data.isResolved !== existingDependency.isResolved) {
         await prisma.activity.create({
           data: {
             teamId: team.id,

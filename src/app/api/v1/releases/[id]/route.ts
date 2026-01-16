@@ -171,7 +171,16 @@ export const GET = withApiAuth(async (request: NextRequest, { team, params }) =>
 export const PATCH = withApiAuth(async (request: NextRequest, { team, params, apiKey }) => {
   try {
     const { id } = await params;
-    const body = await request.json();
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
 
     // Validate request body
     const validation = updateReleaseSchema.safeParse(body);
@@ -387,10 +396,21 @@ export const DELETE = withApiAuth(async (request: NextRequest, { team, params })
       );
     }
 
+    // Find releases that depend on this release (before deleting)
+    const dependentReleases = await prisma.releaseDependency.findMany({
+      where: { blockingReleaseId: id },
+      select: { dependentReleaseId: true },
+    });
+
     // Delete the release (cascades will handle related records)
     await prisma.release.delete({
       where: { id },
     });
+
+    // Recalculate blocked status for dependent releases
+    for (const dep of dependentReleases) {
+      await recalculateDependentBlockedStatus(dep.dependentReleaseId);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

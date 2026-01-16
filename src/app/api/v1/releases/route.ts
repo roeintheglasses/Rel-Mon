@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { releaseStatusEnum, ReleaseStatus, createReleaseSchema } from "@/lib/validations/release";
 import { withApiAuth } from "@/lib/public-api-handler";
+import { ZodError } from "zod";
 
 // Pagination defaults
 const DEFAULT_PAGE = 1;
@@ -157,13 +158,13 @@ export const POST = withApiAuth(async (request: NextRequest, { team }) => {
       }
     }
 
-    // Handle optional ownerId from request body
+    // Handle optional ownerId from validated data
     let ownerId: string | null = null;
-    if (body.ownerId) {
+    if (validatedData.ownerId) {
       // Verify owner exists and belongs to team
       const owner = await prisma.user.findFirst({
         where: {
-          id: body.ownerId,
+          id: validatedData.ownerId,
           memberships: {
             some: {
               teamId: team.id,
@@ -179,7 +180,7 @@ export const POST = withApiAuth(async (request: NextRequest, { team }) => {
         );
       }
 
-      ownerId = body.ownerId;
+      ownerId = validatedData.ownerId;
     }
 
     const release = await prisma.release.create({
@@ -232,9 +233,9 @@ export const POST = withApiAuth(async (request: NextRequest, { team }) => {
   } catch (error) {
     console.error("Error creating release:", error);
 
-    if (error instanceof Error && error.name === "ZodError") {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: "Invalid request data", details: error },
+        { error: "Invalid request data", details: error.flatten() },
         { status: 400 }
       );
     }

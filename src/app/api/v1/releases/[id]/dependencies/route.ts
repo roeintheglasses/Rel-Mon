@@ -242,12 +242,21 @@ export const POST = withApiAuth(
   { requiredScopes: ["dependencies:write"] }
 );
 
+// Maximum recursion depth for circular dependency check to prevent DoS
+const MAX_DEPENDENCY_DEPTH = 50;
+
 // Helper to check for circular dependencies
 async function checkCircularDependency(
   startId: string,
   targetId: string,
-  visited: Set<string> = new Set()
+  visited: Set<string> = new Set(),
+  currentDepth: number = 0
 ): Promise<boolean> {
+  // Prevent DoS via deeply nested dependency chains
+  if (currentDepth >= MAX_DEPENDENCY_DEPTH) {
+    return false;
+  }
+
   if (startId === targetId) {
     return true;
   }
@@ -266,7 +275,12 @@ async function checkCircularDependency(
 
   for (const dep of dependencies) {
     if (
-      await checkCircularDependency(dep.blockingReleaseId, targetId, visited)
+      await checkCircularDependency(
+        dep.blockingReleaseId,
+        targetId,
+        visited,
+        currentDepth + 1
+      )
     ) {
       return true;
     }

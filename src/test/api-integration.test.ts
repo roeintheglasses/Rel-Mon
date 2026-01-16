@@ -153,11 +153,12 @@ const mockSprint = {
 
 const mockDependency = {
   id: "dep-1",
-  releaseId: "release-1",
-  dependsOnReleaseId: "release-2",
+  dependentReleaseId: "release-1",
+  blockingReleaseId: "release-2",
   type: "BLOCKS" as DependencyType,
   description: "Must deploy after release-2",
   isResolved: false,
+  resolvedAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -490,7 +491,7 @@ describe("API Integration Tests", () => {
           "http://localhost:3000/api/v1/releases/release-1",
           { headers: { "X-API-Key": "relmon_validkey123" } }
         );
-        const response = await getRelease(request, { params: { id: "release-1" } });
+        const response = await getRelease(request, { params: Promise.resolve({ id: "release-1" }) });
         const data = await response.json();
 
         expect(response.status).toBe(200);
@@ -504,7 +505,7 @@ describe("API Integration Tests", () => {
           "http://localhost:3000/api/v1/releases/invalid-id",
           { headers: { "X-API-Key": "relmon_validkey123" } }
         );
-        const response = await getRelease(request, { params: { id: "invalid-id" } });
+        const response = await getRelease(request, { params: Promise.resolve({ id: "invalid-id" }) });
         const data = await response.json();
 
         expect(response.status).toBe(404);
@@ -532,7 +533,7 @@ describe("API Integration Tests", () => {
             body: { status: "IN_REVIEW" },
           }
         );
-        const response = await updateRelease(request, { params: { id: "release-1" } });
+        const response = await updateRelease(request, { params: Promise.resolve({ id: "release-1" }) });
         const data = await response.json();
 
         expect(response.status).toBe(200);
@@ -543,6 +544,7 @@ describe("API Integration Tests", () => {
     describe("DELETE /api/v1/releases/:id", () => {
       it("should delete a release", async () => {
         vi.mocked(prisma.release.findFirst).mockResolvedValue(mockRelease);
+        vi.mocked(prisma.releaseDependency.findMany).mockResolvedValue([]);
         vi.mocked(prisma.release.delete).mockResolvedValue(mockRelease);
 
         const request = createMockRequest(
@@ -552,7 +554,7 @@ describe("API Integration Tests", () => {
             headers: { "X-API-Key": "relmon_validkey123" },
           }
         );
-        const response = await deleteRelease(request, { params: { id: "release-1" } });
+        const response = await deleteRelease(request, { params: Promise.resolve({ id: "release-1" }) });
         const data = await response.json();
 
         expect(response.status).toBe(200);
@@ -569,7 +571,7 @@ describe("API Integration Tests", () => {
             headers: { "X-API-Key": "relmon_validkey123" },
           }
         );
-        const response = await deleteRelease(request, { params: { id: "invalid-id" } });
+        const response = await deleteRelease(request, { params: Promise.resolve({ id: "invalid-id" }) });
         const data = await response.json();
 
         expect(response.status).toBe(404);
@@ -607,7 +609,7 @@ describe("API Integration Tests", () => {
           { headers: { "X-API-Key": "relmon_validkey123" } }
         );
         const response = await getDependencies(request, {
-          params: { id: "release-1" },
+          params: Promise.resolve({ id: "release-1" }),
         });
         const data = await response.json();
 
@@ -650,7 +652,7 @@ describe("API Integration Tests", () => {
           }
         );
         const response = await createDependency(request, {
-          params: { id: "release-1" },
+          params: Promise.resolve({ id: "release-1" }),
         });
         const data = await response.json();
 
@@ -674,7 +676,7 @@ describe("API Integration Tests", () => {
           }
         );
         const response = await createDependency(request, {
-          params: { id: "release-1" },
+          params: Promise.resolve({ id: "release-1" }),
         });
         const data = await response.json();
 
@@ -746,7 +748,7 @@ describe("API Integration Tests", () => {
         const request = createMockRequest("http://localhost:3000/api/v1/sprints/sprint-1", {
           headers: { "X-API-Key": "relmon_validkey123" },
         });
-        const response = await getSprint(request, { params: { id: "sprint-1" } });
+        const response = await getSprint(request, { params: Promise.resolve({ id: "sprint-1" }) });
         const data = await response.json();
 
         expect(response.status).toBe(200);
@@ -760,7 +762,7 @@ describe("API Integration Tests", () => {
           "http://localhost:3000/api/v1/sprints/invalid-id",
           { headers: { "X-API-Key": "relmon_validkey123" } }
         );
-        const response = await getSprint(request, { params: { id: "invalid-id" } });
+        const response = await getSprint(request, { params: Promise.resolve({ id: "invalid-id" }) });
         const data = await response.json();
 
         expect(response.status).toBe(404);
