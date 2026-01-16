@@ -39,5 +39,6 @@ export const GET = withApiAuth(
         { status: 500 }
       );
     }
-  }
+  },
+  { requiredScopes: ["sprints:read"] }
 );

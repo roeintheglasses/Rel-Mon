@@ -29,4 +29,4 @@ export const GET = withApiAuth(async (request: NextRequest, { team }) => {
       { status: 500 }
     );
   }
-});
+}, { requiredScopes: ["sprints:read"] });

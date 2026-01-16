@@ -53,7 +53,8 @@ export const GET = withApiAuth(
         { status: 500 }
       );
     }
-  }
+  },
+  { requiredScopes: ["dependencies:read"] }
 );
 
 // PATCH /api/v1/releases/[id]/dependencies/[depId] - Update a dependency
@@ -174,7 +175,8 @@ export const PATCH = withApiAuth(
         { status: 500 }
       );
     }
-  }
+  },
+  { requiredScopes: ["dependencies:write"] }
 );
 
 // DELETE /api/v1/releases/[id]/dependencies/[depId] - Remove a dependency
@@ -231,5 +233,6 @@ export const DELETE = withApiAuth(
         { status: 500 }
       );
     }
-  }
+  },
+  { requiredScopes: ["dependencies:write"] }
 );

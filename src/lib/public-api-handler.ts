@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateApiKey, type ValidatedApiKey } from "./api-auth";
 import { checkRateLimit } from "./rate-limit";
+import type { ApiKeyScope } from "./validations/api-key";
 
 /**
  * Handler function type for public API routes
@@ -12,11 +13,23 @@ type PublicApiHandler<T = any> = (
 ) => Promise<NextResponse> | NextResponse;
 
 /**
- * Higher-order function that wraps API route handlers with authentication and rate limiting
+ * Options for withApiAuth wrapper
+ */
+type WithApiAuthOptions = {
+  /** Required scopes for this endpoint. If any scope matches, access is granted. */
+  requiredScopes?: ApiKeyScope[];
+};
+
+/**
+ * Higher-order function that wraps API route handlers with authentication, scope checking, and rate limiting
  *
  * Authentication:
  * - Validates API key from X-API-Key header
  * - Returns 401 if key is missing, invalid, inactive, or expired
+ *
+ * Scope Checking:
+ * - Verifies API key has at least one of the required scopes
+ * - Returns 403 if scope check fails
  *
  * Rate Limiting:
  * - Enforces 100 requests per minute per API key
@@ -24,16 +37,18 @@ type PublicApiHandler<T = any> = (
  * - Adds rate limit headers to all responses
  *
  * @param handler - The API route handler to wrap
- * @returns Wrapped handler with auth and rate limiting
+ * @param options - Optional configuration including required scopes
+ * @returns Wrapped handler with auth, scope checking, and rate limiting
  *
  * @example
  * export const GET = withApiAuth(async (request, { team, apiKey }) => {
  *   // Handler has access to validated team and apiKey
  *   return NextResponse.json({ data: "..." });
- * });
+ * }, { requiredScopes: ["releases:read"] });
  */
 export function withApiAuth<T = any>(
-  handler: PublicApiHandler<T>
+  handler: PublicApiHandler<T>,
+  options: WithApiAuthOptions = {}
 ): (request: NextRequest, context: { params?: T }) => Promise<NextResponse> {
   return async (
     request: NextRequest,
@@ -56,6 +71,26 @@ export function withApiAuth<T = any>(
       }
 
       const { team, apiKey } = validated;
+
+      // Check required scopes
+      if (options.requiredScopes && options.requiredScopes.length > 0) {
+        const keyScopes = apiKey.scopes as string[];
+        const hasRequiredScope = options.requiredScopes.some((scope) =>
+          keyScopes.includes(scope)
+        );
+
+        if (!hasRequiredScope) {
+          return NextResponse.json(
+            {
+              error: "Forbidden. Insufficient permissions.",
+              message: `This endpoint requires one of: ${options.requiredScopes.join(", ")}`,
+              requiredScopes: options.requiredScopes,
+              yourScopes: keyScopes,
+            },
+            { status: 403 }
+          );
+        }
+      }
 
       // Check rate limiting
       const rateLimitResult = checkRateLimit(apiKey.id);

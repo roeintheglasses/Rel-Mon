@@ -86,7 +86,8 @@ export const GET = withApiAuth(
         { status: 500 }
       );
     }
-  }
+  },
+  { requiredScopes: ["dependencies:read"] }
 );
 
 // POST /api/v1/releases/[id]/dependencies - Add a dependency
@@ -237,7 +238,8 @@ export const POST = withApiAuth(
         { status: 500 }
       );
     }
-  }
+  },
+  { requiredScopes: ["dependencies:write"] }
 );
 
 // Helper to check for circular dependencies

@@ -165,7 +165,7 @@ export const GET = withApiAuth(async (request: NextRequest, { team, params }) =>
       { status: 500 }
     );
   }
-});
+}, { requiredScopes: ["releases:read"] });
 
 // PATCH /api/v1/releases/[id] - Update a release
 export const PATCH = withApiAuth(async (request: NextRequest, { team, params, apiKey }) => {
@@ -368,7 +368,7 @@ export const PATCH = withApiAuth(async (request: NextRequest, { team, params, ap
       { status: 500 }
     );
   }
-});
+}, { requiredScopes: ["releases:write"] });
 
 // DELETE /api/v1/releases/[id] - Delete a release
 export const DELETE = withApiAuth(async (request: NextRequest, { team, params }) => {
@@ -399,4 +399,4 @@ export const DELETE = withApiAuth(async (request: NextRequest, { team, params })
       { status: 500 }
     );
   }
-});
+}, { requiredScopes: ["releases:write"] });

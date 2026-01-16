@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { releaseStatusEnum, ReleaseStatus, createReleaseSchema } from "@/lib/validations/release";
 import { withApiAuth } from "@/lib/public-api-handler";
 
+// Pagination defaults
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 100;
+
 // GET /api/v1/releases - List all releases for the authenticated team
 export const GET = withApiAuth(async (request: NextRequest, { team }) => {
   try {
@@ -14,6 +19,11 @@ export const GET = withApiAuth(async (request: NextRequest, { team }) => {
     const ownerId = searchParams.get("ownerId");
     const isBlocked = searchParams.get("isBlocked");
 
+    // Pagination parameters
+    const page = Math.max(1, parseInt(searchParams.get("page") || String(DEFAULT_PAGE), 10));
+    const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(searchParams.get("limit") || String(DEFAULT_LIMIT), 10)));
+    const skip = (page - 1) * limit;
+
     // Build status filter with validation
     let statusFilter = {};
     if (statuses) {
@@ -22,23 +32,42 @@ export const GET = withApiAuth(async (request: NextRequest, { team }) => {
         .filter((s) => releaseStatusEnum.safeParse(s).success) as ReleaseStatus[];
       if (statusList.length > 0) {
         statusFilter = { status: { in: statusList } };
+      } else {
+        // All provided statuses were invalid
+        return NextResponse.json(
+          { error: "Invalid status values provided", validStatuses: releaseStatusEnum.options },
+          { status: 400 }
+        );
       }
     } else if (status) {
       if (releaseStatusEnum.safeParse(status).success) {
         statusFilter = { status: status as ReleaseStatus };
+      } else {
+        return NextResponse.json(
+          { error: `Invalid status: ${status}`, validStatuses: releaseStatusEnum.options },
+          { status: 400 }
+        );
       }
     }
 
+    // Build where clause
+    const whereClause = {
+      teamId: team.id,
+      ...(sprintId ? { sprintId } : {}),
+      ...(serviceId ? { serviceId } : {}),
+      ...statusFilter,
+      ...(ownerId ? { ownerId } : {}),
+      ...(isBlocked === "true" ? { isBlocked: true } : {}),
+      ...(isBlocked === "false" ? { isBlocked: false } : {}),
+    };
+
+    // Get total count for pagination metadata
+    const totalCount = await prisma.release.count({ where: whereClause });
+
     const releases = await prisma.release.findMany({
-      where: {
-        teamId: team.id,
-        ...(sprintId ? { sprintId } : {}),
-        ...(serviceId ? { serviceId } : {}),
-        ...statusFilter,
-        ...(ownerId ? { ownerId } : {}),
-        ...(isBlocked === "true" ? { isBlocked: true } : {}),
-        ...(isBlocked === "false" ? { isBlocked: false } : {}),
-      },
+      where: whereClause,
+      skip,
+      take: limit,
       orderBy: { updatedAt: "desc" },
       include: {
         service: {
@@ -74,7 +103,19 @@ export const GET = withApiAuth(async (request: NextRequest, { team }) => {
       },
     });
 
-    return NextResponse.json(releases);
+    // Return paginated response with metadata
+    const totalPages = Math.ceil(totalCount / limit);
+    return NextResponse.json({
+      data: releases,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    });
   } catch (error) {
     console.error("Error fetching releases:", error);
     return NextResponse.json(
@@ -82,7 +123,7 @@ export const GET = withApiAuth(async (request: NextRequest, { team }) => {
       { status: 500 }
     );
   }
-});
+}, { requiredScopes: ["releases:read"] });
 
 // POST /api/v1/releases - Create a new release
 export const POST = withApiAuth(async (request: NextRequest, { team }) => {
@@ -203,4 +244,4 @@ export const POST = withApiAuth(async (request: NextRequest, { team }) => {
       { status: 500 }
     );
   }
-});
+}, { requiredScopes: ["releases:write"] });

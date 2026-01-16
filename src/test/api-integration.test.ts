@@ -32,6 +32,7 @@ vi.mock("@/lib/prisma", () => ({
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+      count: vi.fn(),
     },
     service: {
       findFirst: vi.fn(),
@@ -84,7 +85,7 @@ const mockApiKey = {
   teamId: "team-1",
   name: "Test API Key",
   key: "hashed-key",
-  scopes: ["releases:read", "releases:write", "sprints:read"],
+  scopes: ["releases:read", "releases:write", "sprints:read", "dependencies:read", "dependencies:write"],
   isActive: true,
   lastUsedAt: new Date(),
   expiresAt: null,
@@ -230,6 +231,7 @@ describe("API Integration Tests", () => {
         resetAt: new Date(Date.now() + 60000),
       });
       vi.mocked(prisma.release.findMany).mockResolvedValue([mockRelease]);
+      vi.mocked(prisma.release.count).mockResolvedValue(1);
 
       const request = createMockRequest("http://localhost:3000/api/v1/releases", {
         headers: { "X-API-Key": "relmon_validkey123" },
@@ -285,6 +287,7 @@ describe("API Integration Tests", () => {
         resetAt: new Date(Date.now() + 60000),
       });
       vi.mocked(prisma.release.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.release.count).mockResolvedValue(0);
 
       const request = createMockRequest("http://localhost:3000/api/v1/releases", {
         headers: { "X-API-Key": "relmon_validkey123" },
@@ -311,8 +314,9 @@ describe("API Integration Tests", () => {
     });
 
     describe("GET /api/v1/releases", () => {
-      it("should list releases for authenticated team", async () => {
+      it("should list releases for authenticated team with pagination", async () => {
         vi.mocked(prisma.release.findMany).mockResolvedValue([mockRelease]);
+        vi.mocked(prisma.release.count).mockResolvedValue(1);
 
         const request = createMockRequest("http://localhost:3000/api/v1/releases", {
           headers: { "X-API-Key": "relmon_validkey123" },
@@ -321,17 +325,23 @@ describe("API Integration Tests", () => {
         const data = await response.json();
 
         expect(response.status).toBe(200);
-        expect(data).toHaveLength(1);
-        expect(data[0].id).toBe("release-1");
+        expect(data.data).toHaveLength(1);
+        expect(data.data[0].id).toBe("release-1");
+        expect(data.pagination).toBeDefined();
+        expect(data.pagination.page).toBe(1);
+        expect(data.pagination.totalCount).toBe(1);
         expect(prisma.release.findMany).toHaveBeenCalledWith(
           expect.objectContaining({
             where: expect.objectContaining({ teamId: "team-1" }),
+            skip: 0,
+            take: 50,
           })
         );
       });
 
       it("should filter releases by status", async () => {
         vi.mocked(prisma.release.findMany).mockResolvedValue([mockRelease]);
+        vi.mocked(prisma.release.count).mockResolvedValue(1);
 
         const request = createMockRequest(
           "http://localhost:3000/api/v1/releases?status=IN_DEVELOPMENT",
@@ -348,8 +358,22 @@ describe("API Integration Tests", () => {
         );
       });
 
+      it("should return 400 for invalid status filter", async () => {
+        const request = createMockRequest(
+          "http://localhost:3000/api/v1/releases?status=INVALID_STATUS",
+          { headers: { "X-API-Key": "relmon_validkey123" } }
+        );
+        const response = await getReleases(request, {});
+        const data = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(data.error).toContain("Invalid status");
+        expect(data.validStatuses).toBeDefined();
+      });
+
       it("should filter releases by serviceId", async () => {
         vi.mocked(prisma.release.findMany).mockResolvedValue([mockRelease]);
+        vi.mocked(prisma.release.count).mockResolvedValue(1);
 
         const request = createMockRequest(
           "http://localhost:3000/api/v1/releases?serviceId=service-1",
@@ -362,6 +386,50 @@ describe("API Integration Tests", () => {
             where: expect.objectContaining({
               serviceId: "service-1",
             }),
+          })
+        );
+      });
+
+      it("should support pagination parameters", async () => {
+        vi.mocked(prisma.release.findMany).mockResolvedValue([mockRelease]);
+        vi.mocked(prisma.release.count).mockResolvedValue(100);
+
+        const request = createMockRequest(
+          "http://localhost:3000/api/v1/releases?page=2&limit=10",
+          { headers: { "X-API-Key": "relmon_validkey123" } }
+        );
+        const response = await getReleases(request, {});
+        const data = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(data.pagination.page).toBe(2);
+        expect(data.pagination.limit).toBe(10);
+        expect(data.pagination.totalPages).toBe(10);
+        expect(data.pagination.hasNextPage).toBe(true);
+        expect(data.pagination.hasPreviousPage).toBe(true);
+        expect(prisma.release.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            skip: 10,
+            take: 10,
+          })
+        );
+      });
+
+      it("should cap limit at maximum of 100", async () => {
+        vi.mocked(prisma.release.findMany).mockResolvedValue([]);
+        vi.mocked(prisma.release.count).mockResolvedValue(0);
+
+        const request = createMockRequest(
+          "http://localhost:3000/api/v1/releases?limit=500",
+          { headers: { "X-API-Key": "relmon_validkey123" } }
+        );
+        const response = await getReleases(request, {});
+        const data = await response.json();
+
+        expect(data.pagination.limit).toBe(100);
+        expect(prisma.release.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            take: 100,
           })
         );
       });
