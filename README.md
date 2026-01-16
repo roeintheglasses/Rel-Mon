@@ -86,7 +86,38 @@ Before setting up the project, ensure you have:
 - **GitHub Account** - For GitHub integration features
 - **Slack Workspace** - For notification features
 
-## 🚀 Setup Instructions
+## ⚡ Quick Start (5-10 minutes)
+
+Want to get the app running quickly for local development? Follow these streamlined steps:
+
+```bash
+# 1. Clone and install
+git clone <repository-url>
+cd release-coordinator
+npm install
+
+# 2. Copy environment template
+cp .env.example .env
+
+# 3. Edit .env and add your credentials:
+#    - DATABASE_URL: Get a free database at https://neon.tech
+#    - CLERK keys: Get from https://clerk.com (create account + app)
+#    - TOKEN_ENCRYPTION_KEY: Run: openssl rand -base64 32
+
+# 4. Set up database
+npx prisma db push
+
+# 5. Start development server
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to see the app!
+
+**Note:** This Quick Start uses minimal configuration. Clerk webhooks and OAuth integrations can be configured later. See the [Full Setup Instructions](#full-setup-instructions) below for production-ready configuration.
+
+---
+
+## 🚀 Full Setup Instructions
 
 ### 1. Clone the Repository
 
@@ -105,7 +136,15 @@ This will install all required packages and automatically run `prisma generate` 
 
 ### 3. Set Up Environment Variables
 
-Create a `.env` file in the root directory with the following variables:
+Copy the example environment file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+**Important:** Generate your `TOKEN_ENCRYPTION_KEY` first (see Step 7 below) before completing your `.env` file.
+
+Or create a `.env` file manually with the following variables:
 
 ```env
 # Database (Neon PostgreSQL)
@@ -162,13 +201,23 @@ npx prisma migrate dev --name init
 
 1. Create a Clerk application at [clerk.com](https://clerk.com)
 2. Enable organizations in your Clerk dashboard
-3. Set up the webhook endpoint: `https://your-domain/api/webhooks/clerk`
-4. Configure the following webhook events:
+3. Copy your API keys to the `.env` file:
+   - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+   - `CLERK_SECRET_KEY`
+   - `CLERK_WEBHOOK_SECRET`
+
+**For Local Development:** You can skip webhook configuration initially and set it up later when deploying. The app will run without webhooks, but user and organization sync features will be limited.
+
+**For Production:** Set up the webhook endpoint for full functionality:
+1. Deploy your application and get your public URL
+2. In Clerk dashboard, add webhook endpoint: `https://your-domain/api/webhooks/clerk`
+3. Configure the following webhook events:
    - `user.created`
    - `user.updated`
    - `organization.created`
    - `organization.updated`
    - `organizationMembership.created`
+4. For local development with webhooks, use [ngrok](https://ngrok.com/) to expose your local server
 
 ### 6. (Optional) Configure OAuth Integrations
 
@@ -213,6 +262,87 @@ In the team settings, add your Slack webhook URL to receive notifications for:
 - Release status changes
 - Blocked releases
 - Releases ready to deploy
+
+---
+
+## ✅ Verify Your Setup
+
+After completing the setup steps, verify everything is working correctly:
+
+### 1. Check Database Connection
+
+Open Prisma Studio to confirm your database is properly configured:
+
+```bash
+npx prisma studio
+```
+
+This should open a browser window at `http://localhost:5555` showing your database tables.
+
+### 2. Build the Application
+
+Verify the application builds without errors:
+
+```bash
+npm run build
+```
+
+You should see a successful build output with no TypeScript or build errors.
+
+### 3. Run Development Server
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+You should see output indicating the server is running on `http://localhost:3000`.
+
+### 4. Access the Application
+
+Open [http://localhost:3000](http://localhost:3000) in your browser. You should see:
+- The Clerk sign-in page if authentication is configured correctly
+- No console errors in the browser developer tools
+
+### 5. Run Tests
+
+Verify the test suite passes:
+
+```bash
+npm run test:run
+```
+
+All tests should pass with no errors.
+
+### Common Issues
+
+**"Error: DATABASE_URL not found"**
+- Ensure your `.env` file exists in the root directory
+- Verify `DATABASE_URL` is set correctly
+- Try restarting the development server
+
+**"Clerk keys are not valid"**
+- Double-check your Clerk keys in the `.env` file
+- Ensure you're using the correct keys for your Clerk application
+- Verify there are no extra spaces or quotes
+
+**"Port 3000 is already in use"**
+- Stop any other processes using port 3000
+- Or specify a different port: `PORT=3001 npm run dev`
+
+**"Prisma Client did not initialize"**
+- Run `npx prisma generate` manually
+- Delete `node_modules/.prisma` and run `npm install` again
+
+**Webhook events not working locally**
+- Clerk webhooks require a public URL
+- Use [ngrok](https://ngrok.com/) to expose your local server: `ngrok http 3000`
+- Update the webhook URL in Clerk dashboard to your ngrok URL
+
+For more help, see our [Troubleshooting Guide](docs/DEVELOPMENT.md#troubleshooting).
+
+---
 
 ## 🔐 Environment Variables Guide
 
