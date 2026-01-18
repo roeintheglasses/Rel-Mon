@@ -48,7 +48,8 @@ const ReleaseCardContent = forwardRef<
     return email.slice(0, 2).toUpperCase();
   };
 
-  const getOwnerName = (owner: Release["owner"]) => {
+  const getOwnerName = (owner: Release["owner"] | null) => {
+    if (!owner) return "Unknown";
     if (owner.firstName || owner.lastName) {
       return `${owner.firstName || ""} ${owner.lastName || ""}`.trim();
     }
@@ -152,21 +153,23 @@ const ReleaseCardContent = forwardRef<
           </div>
 
           {/* Owner avatar */}
-          <Tooltip>
-            <TooltipTrigger>
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={release.owner.avatarUrl || undefined} />
-                <AvatarFallback className="text-[10px]">
-                  {getInitials(
-                    release.owner.firstName,
-                    release.owner.lastName,
-                    release.owner.email
-                  )}
-                </AvatarFallback>
-              </Avatar>
-            </TooltipTrigger>
-            <TooltipContent>{getOwnerName(release.owner)}</TooltipContent>
-          </Tooltip>
+          {release.owner && (
+            <Tooltip>
+              <TooltipTrigger>
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={release.owner.avatarUrl || undefined} />
+                  <AvatarFallback className="text-[10px]">
+                    {getInitials(
+                      release.owner.firstName,
+                      release.owner.lastName,
+                      release.owner.email
+                    )}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent>{getOwnerName(release.owner)}</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
     </div>

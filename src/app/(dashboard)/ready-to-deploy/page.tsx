@@ -37,14 +37,16 @@ const PRIORITY_COLORS: Record<string, string> = {
   CRITICAL: "bg-red-100 text-red-700",
 };
 
-function getOwnerName(owner: Release["owner"]) {
+function getOwnerName(owner: Release["owner"] | null) {
+  if (!owner) return "Unknown";
   if (owner.firstName || owner.lastName) {
     return `${owner.firstName || ""} ${owner.lastName || ""}`.trim();
   }
   return owner.email;
 }
 
-function getInitials(owner: Release["owner"]) {
+function getInitials(owner: Release["owner"] | null) {
+  if (!owner) return "??";
   if (owner.firstName || owner.lastName) {
     return `${owner.firstName?.[0] || ""}${owner.lastName?.[0] || ""}`.toUpperCase();
   }
@@ -93,22 +95,24 @@ function DeployableReleaseCard({ release }: { release: Release }) {
               {/* Metadata row */}
               <div className="flex flex-wrap items-center gap-3 text-sm">
                 {/* Owner */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1.5">
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={release.owner.avatarUrl || undefined} />
-                        <AvatarFallback className="text-[10px]">
-                          {getInitials(release.owner)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-muted-foreground">
-                        {getOwnerName(release.owner)}
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Release Owner</TooltipContent>
-                </Tooltip>
+                {release.owner && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1.5">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={release.owner.avatarUrl || undefined} />
+                          <AvatarFallback className="text-[10px]">
+                            {getInitials(release.owner)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-muted-foreground">
+                          {getOwnerName(release.owner)}
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>Release Owner</TooltipContent>
+                  </Tooltip>
+                )}
 
                 {/* Dependencies */}
                 {dependencyCount > 0 && (
