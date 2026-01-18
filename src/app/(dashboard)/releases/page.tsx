@@ -479,14 +479,18 @@ export default function ReleasesPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-7 w-7">
-                        <AvatarImage src={release.owner.avatarUrl || undefined} />
-                        <AvatarFallback className="text-xs">
-                          {getInitials(release.owner.firstName, release.owner.lastName, release.owner.email)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
+                    {release.owner ? (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={release.owner.avatarUrl || undefined} />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(release.owner.firstName, release.owner.lastName, release.owner.email)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Dialog

@@ -46,14 +46,16 @@ const DEPENDENCY_TYPE_LABELS: Record<string, string> = {
   REQUIRES_SYNC: "Requires Sync",
 };
 
-function getOwnerName(owner: Release["owner"]) {
+function getOwnerName(owner: Release["owner"] | null) {
+  if (!owner) return "Unknown";
   if (owner.firstName || owner.lastName) {
     return `${owner.firstName || ""} ${owner.lastName || ""}`.trim();
   }
   return owner.email;
 }
 
-function getInitials(owner: Release["owner"]) {
+function getInitials(owner: Release["owner"] | null) {
+  if (!owner) return "??";
   if (owner.firstName || owner.lastName) {
     return `${owner.firstName?.[0] || ""}${owner.lastName?.[0] || ""}`.toUpperCase();
   }
@@ -192,15 +194,17 @@ function BlockedReleaseCard({ release }: { release: Release }) {
 
             {/* Meta info */}
             <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Avatar className="h-4 w-4">
-                  <AvatarImage src={release.owner.avatarUrl || undefined} />
-                  <AvatarFallback className="text-[8px]">
-                    {getInitials(release.owner)}
-                  </AvatarFallback>
-                </Avatar>
-                {getOwnerName(release.owner)}
-              </div>
+              {release.owner && (
+                <div className="flex items-center gap-1">
+                  <Avatar className="h-4 w-4">
+                    <AvatarImage src={release.owner.avatarUrl || undefined} />
+                    <AvatarFallback className="text-[8px]">
+                      {getInitials(release.owner)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {getOwnerName(release.owner)}
+                </div>
+              )}
               {release.sprint && <span>{release.sprint.name}</span>}
               <span>
                 Blocked {formatDistanceToNow(new Date(release.updatedAt), { addSuffix: true })}
